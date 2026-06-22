@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data, models, and outputs (large or regenerated)
+data/
+checkpoints/
+results/
+
+# Secrets
+.env
+
+# OS and editor
+.DS_Store
+.vscode/
+.idea/
