@@ -26,6 +26,21 @@ ground-truth masks for the defects.
 > Zou et al., *SPot-the-Difference Self-Supervised Pre-training for Anomaly Detection
 > and Segmentation*, ECCV 2022.
 
+## Project structure
+
+```text
+industrial-defect-detection/
+├── src/         # Python modules (pure Python): config, data, SAM, baseline, evaluation
+├── scripts/     # interactive dev scripts (# %% cells, VS Code Jupyter window)
+├── notebooks/   # thin Colab launcher (clone, install, run on GPU)
+├── assets/      # curated figures committed for this README
+├── data/        # dataset cache (gitignored; on Colab → Google Drive)
+└── results/     # generated outputs (gitignored)
+```
+
+Development happens locally in VS Code; GPU runs happen on Google Colab. See
+[CLAUDE.md](CLAUDE.md) for the full workflow.
+
 ## Roadmap
 
 - [x] Repository setup

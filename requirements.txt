@@ -1,0 +1,14 @@
+# Python dependencies.
+#
+# Note: on Google Colab, torch / torchvision come preinstalled, so they are not
+# listed here to avoid clobbering Colab's GPU-matched build. Versions will be
+# pinned once the SAM pipeline is validated end-to-end on Colab.
+
+numpy
+pillow
+matplotlib
+opencv-python
+tqdm
+
+# Segment Anything Model (installed straight from GitHub)
+git+https://github.com/facebookresearch/segment-anything.git
