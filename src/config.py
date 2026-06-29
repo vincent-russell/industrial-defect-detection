@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def in_colab() -> bool:
     """True when running inside a Google Colab runtime."""
     try:
-        import google.colab  # noqa: F401  (only present on Colab)
+        import google.colab  # type: ignore # noqa: F401  (only present on Colab)
 
         return True
     except ImportError:
