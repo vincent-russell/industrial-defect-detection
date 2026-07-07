@@ -30,16 +30,16 @@ ground-truth masks for the defects.
 
 ```text
 industrial-defect-detection/
-├── src/         # Python modules (pure Python): config, data, SAM, baseline, evaluation
-├── scripts/     # interactive dev scripts (# %% cells, VS Code Jupyter window)
-├── notebooks/   # thin Colab launcher (clone, install, run on GPU)
-├── assets/      # curated figures committed for this README
-├── data/        # dataset cache (gitignored; on Colab → Google Drive)
-└── results/     # generated outputs (gitignored)
+├── src/          # Python modules (pure Python): config, data, SAM, baseline, evaluation
+├── scripts/      # interactive dev scripts (# %% cells, VS Code Jupyter window)
+├── assets/       # curated figures committed for this README
+├── checkpoints/  # SAM model weights (gitignored)
+├── data/         # dataset cache (gitignored)
+└── results/      # generated outputs (gitignored)
 ```
 
-Development happens locally in VS Code; GPU runs happen on Google Colab. See
-[CLAUDE.md](CLAUDE.md) for the full workflow.
+Everything runs locally in VS Code, with SAM inference on a local NVIDIA GPU
+(developed on an RTX 2070, 8 GB). See [CLAUDE.md](CLAUDE.md) for the full workflow.
 
 ## Roadmap
 
@@ -51,7 +51,7 @@ Development happens locally in VS Code; GPU runs happen on Google Colab. See
 
 ## Tech
 
-Python · PyTorch · Segment Anything (SAM) · Google Colab (GPU)
+Python · PyTorch (CUDA) · Segment Anything (SAM)
 
 ## License
 

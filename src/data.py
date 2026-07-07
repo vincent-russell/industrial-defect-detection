@@ -16,9 +16,9 @@ dataset root, i.e. the directory that holds the category folders):
     <root>/<category>/Data/Images/Anomaly/*.JPG
     <root>/<category>/Data/Masks/Anomaly/*.png      # masks only for anomalies
 
-Pure Python — safe to import from `scripts/` and the Colab notebook. The ~16 GB
-download is intended to run on Colab (GPU session, dataset cached to Drive); the
-split parsing and path logic here are light enough to exercise locally.
+Pure Python. Everything runs locally: the ~16 GB tarball downloads and extracts
+under `data/` (gitignored). Budget disk and time for the first download; it is
+idempotent, so reruns are cheap.
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ CATEGORIES = (
     "macaroni2", "pcb1", "pcb2", "pcb3", "pcb4", "pipe_fryum",
 )
 
-# Where things land under the data directory (local repo or Drive on Colab).
+# Where things land under the local data directory (all gitignored).
 VISA_DIR = config.DATA_DIR / "VisA"          # extraction target
 VISA_TAR = config.DATA_DIR / "VisA_20220922.tar"
 SPLIT_CSV = config.DATA_DIR / "split_csv_1cls.csv"
@@ -146,7 +146,7 @@ def load_samples(
 
     Resolves every image/mask to an absolute path under the extracted dataset.
     Downloads the small split CSV on first use; assumes the images themselves
-    are already extracted (call `download_visa()` first on Colab).
+    are already extracted (call `download_visa()` first).
     """
     if category is not None and category not in CATEGORIES:
         raise ValueError(f"Unknown category {category!r}; choose from {CATEGORIES}")

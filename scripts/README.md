@@ -5,4 +5,4 @@ separators, so you can run them cell-by-cell in VS Code's **Jupyter Interactive 
 (Shift+Enter) — the same feel as a notebook, but version-control-friendly.
 
 They import logic from `src/` and are used for exploration, plotting, and quick checks.
-Nothing here needs a GPU; the GPU work runs on Colab via `notebooks/`.
+GPU work (SAM inference) runs on the local NVIDIA GPU — no separate runtime needed.

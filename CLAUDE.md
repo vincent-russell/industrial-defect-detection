@@ -9,34 +9,35 @@ Goal: a clean, reproducible, well-documented computer-vision pipeline — not st
 performance.
 
 ## How development works
-- **Local (VS Code), no GPU:** write and iterate code. Real logic lives in `src/` as pure
-  Python modules. Exploratory work uses `# %%`-celled scripts in `scripts/`, run cell-by-cell
+Everything runs locally on a single workstation (RTX 2070 8 GB, Ryzen 5900X, 32 GB RAM).
+- **Write logic in `src/`** as pure Python modules.
+- **Iterate in `scripts/`:** exploratory work uses `# %%`-celled scripts, run cell-by-cell
   in VS Code's Jupyter Interactive Window (they import from `src/`).
-- **Colab (GPU):** the only place SAM actually runs. A single thin notebook in `notebooks/`
-  clones the repo, installs requirements, mounts Drive, and runs code from `src/`.
-- **Storage:** code → GitHub; dataset (~16 GB) and bulky outputs → Google Drive (Colab's
-  local disk is wiped each session); a few curated showcase figures → committed to `assets/`.
+- **Run SAM on the local GPU:** inference uses CUDA directly. Mind the 8 GB VRAM budget when
+  choosing the SAM variant (`vit_b`/`vit_l` are safer than `vit_h`).
+- **Storage:** code → GitHub; dataset (~16 GB), model weights, and bulky outputs → local
+  gitignored dirs (`data/`, `checkpoints/`, `results/`); curated showcase figures → `assets/`.
 
 ## Conventions
-- `src/*.py` is **pure Python** — no `!`/`%` notebook magics (those live only in the notebook).
+- `src/*.py` is **pure Python** — no `!`/`%` notebook magics.
 - Large or regenerated artifacts (dataset, model weights, results) are gitignored.
 - Keep modules small and readable. Commits are authored by Vincent Russell, small and clear.
 
 ## Folder structure
 ```
-src/         pure-Python modules (logic)
-scripts/     # %% interactive dev scripts (import from src/)
-notebooks/   thin Colab launcher (.ipynb)
-assets/      curated figures committed for the README
-data/        dataset cache (gitignored; on Colab → Google Drive)
-results/     generated outputs (gitignored)
+src/          pure-Python modules (logic)
+scripts/      # %% interactive dev scripts (import from src/)
+assets/       curated figures committed for the README
+checkpoints/  SAM model weights (gitignored)
+data/         dataset cache (gitignored)
+results/      generated outputs (gitignored)
 ```
 
 ## Build order (incremental — one piece at a time)
 1. [x] Repository setup (README, .gitignore, MIT license, first push)
 2. [x] Folder structure + workflow
-3. [ ] VisA download + loader (verify the live source URL before hardcoding; dataset ~16 GB)
-4. [ ] Single end-to-end SAM inference example on Colab
+3. [x] VisA download + loader (verify the live source URL before hardcoding; dataset ~16 GB)
+4. [ ] Single end-to-end SAM inference example (local GPU)
 5. [ ] Simple baseline + evaluation (IoU)
 
 ## Dataset
