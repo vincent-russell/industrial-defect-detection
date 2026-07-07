@@ -1,18 +1,17 @@
-# Python dependencies.
+# Python dependencies, pinned to the versions in the local .venv.
 #
-# torch / torchvision default to CUDA-enabled wheels. For a specific CUDA
+# torch / torchvision are the default CUDA-enabled wheels. For a different CUDA
 # version, install them first from the official index, e.g.:
-#     pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
-# Versions will be pinned once the SAM pipeline is validated end-to-end.
+#     pip install torch torchvision --index-url https://download.pytorch.org/whl/cu130
 
-torch
-torchvision
+torch==2.12.1
+torchvision==0.27.1
 
-numpy
-pillow
-matplotlib
-opencv-python
-tqdm
+numpy==2.5.1
+pillow==12.3.0
+matplotlib==3.11.0
+opencv-python==5.0.0.93
+tqdm==4.68.3
 
-# Segment Anything Model (installed straight from GitHub)
-git+https://github.com/facebookresearch/segment-anything.git
+# Segment Anything Model (from GitHub, pinned to a commit for reproducibility)
+segment-anything @ git+https://github.com/facebookresearch/segment-anything.git@dca509fe793f601edb92606367a655c15ac00fdf
