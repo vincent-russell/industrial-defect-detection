@@ -38,8 +38,8 @@ industrial-defect-detection/
 └── results/      # generated outputs (gitignored)
 ```
 
-Everything runs locally in VS Code, with SAM inference on a local NVIDIA GPU
-(developed on an RTX 2070, 8 GB). See [CLAUDE.md](CLAUDE.md) for the full workflow.
+Everything runs locally in VS Code, with SAM inference on a local NVIDIA GPU.
+See [CLAUDE.md](CLAUDE.md) for the full workflow.
 
 ## Roadmap
 

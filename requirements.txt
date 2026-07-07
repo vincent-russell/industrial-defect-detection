@@ -1,10 +1,8 @@
 # Python dependencies.
 #
-# torch / torchvision are the CUDA builds. The default PyPI wheels ship with a
-# bundled CUDA runtime that works on the RTX 2070 (Turing, sm_75). If you need a
-# specific CUDA version, install torch first from the official index, e.g.:
+# torch / torchvision default to CUDA-enabled wheels. For a specific CUDA
+# version, install them first from the official index, e.g.:
 #     pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
-# then `pip install -r requirements.txt` for the rest.
 # Versions will be pinned once the SAM pipeline is validated end-to-end.
 
 torch

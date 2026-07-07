@@ -9,12 +9,12 @@ Goal: a clean, reproducible, well-documented computer-vision pipeline — not st
 performance.
 
 ## How development works
-Everything runs locally on a single workstation (RTX 2070 8 GB, Ryzen 5900X, 32 GB RAM).
+Everything runs locally on a machine with an NVIDIA GPU.
 - **Write logic in `src/`** as pure Python modules.
 - **Iterate in `scripts/`:** exploratory work uses `# %%`-celled scripts, run cell-by-cell
   in VS Code's Jupyter Interactive Window (they import from `src/`).
-- **Run SAM on the local GPU:** inference uses CUDA directly. Mind the 8 GB VRAM budget when
-  choosing the SAM variant (`vit_b`/`vit_l` are safer than `vit_h`).
+- **Run SAM on the local GPU:** inference uses CUDA directly. Pick the SAM variant to fit
+  available VRAM (`vit_b`/`vit_l` are lighter than `vit_h`).
 - **Storage:** code → GitHub; dataset (~16 GB), model weights, and bulky outputs → local
   gitignored dirs (`data/`, `checkpoints/`, `results/`); curated showcase figures → `assets/`.
 

@@ -160,7 +160,7 @@ def load_samples(
         )
 
     samples: list[VisaSample] = []
-    with open(SPLIT_CSV, newline="") as f:
+    with open(SPLIT_CSV, newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
             if category and row["object"] != category:
                 continue
