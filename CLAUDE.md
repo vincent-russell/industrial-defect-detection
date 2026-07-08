@@ -11,12 +11,17 @@ performance.
 ## How development works
 Everything runs locally on a machine with an NVIDIA GPU.
 - **Write logic in `src/`** as pure Python modules.
-- **Iterate in `scripts/`:** exploratory work uses `# %%`-celled scripts, run cell-by-cell
-  in VS Code's Jupyter Interactive Window (they import from `src/`).
+- **Run everything from `main.py`:** the single entry point imports from `src/`,
+  sets the run's parameters, and wires the pipeline together. Run it with F5 /
+  `python main.py`, or highlight a block and "Run Selection" to iterate.
+- **Parameters live in `src/config.py`** as a typed, frozen `Config` dataclass
+  (not YAML) — type-checked, IDE-navigable, with computed fields and a
+  `to_json` provenance dump. Override at the entry point, e.g.
+  `Config(sam_variant="vit_l")`.
 - **Run SAM on the local GPU:** inference uses CUDA directly. Pick the SAM variant to fit
   available VRAM (`vit_b`/`vit_l` are lighter than `vit_h`).
 - **Storage:** code → GitHub; dataset (~16 GB), model weights, and bulky outputs → local
-  gitignored dirs (`data/`, `checkpoints/`, `results/`); curated showcase figures → `assets/`.
+  gitignored dirs (`data/`, `models/`, `results/`); curated showcase figures → `assets/`.
 
 ## Conventions
 - `src/*.py` is **pure Python** — no `!`/`%` notebook magics.
@@ -25,10 +30,10 @@ Everything runs locally on a machine with an NVIDIA GPU.
 
 ## Folder structure
 ```
+main.py       entry point (sets parameters, wires the pipeline)
 src/          pure-Python modules (logic)
-scripts/      # %% interactive dev scripts (import from src/)
 assets/       curated figures committed for the README
-checkpoints/  SAM model weights (gitignored)
+models/       pretrained SAM weights (gitignored)
 data/         dataset cache (gitignored)
 results/      generated outputs (gitignored)
 ```

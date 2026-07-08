@@ -30,16 +30,17 @@ ground-truth masks for the defects.
 
 ```text
 industrial-defect-detection/
+├── main.py       # entry point: sets run parameters and wires the pipeline together
 ├── src/          # Python modules (pure Python): config, data, SAM, baseline, evaluation
-├── scripts/      # interactive dev scripts (# %% cells, VS Code Jupyter window)
 ├── assets/       # curated figures committed for this README
-├── checkpoints/  # SAM model weights (gitignored)
+├── models/       # pretrained SAM weights (gitignored)
 ├── data/         # dataset cache (gitignored)
 └── results/      # generated outputs (gitignored)
 ```
 
 Everything runs locally in VS Code, with SAM inference on a local NVIDIA GPU.
-See [CLAUDE.md](CLAUDE.md) for the full workflow.
+Run the pipeline from `main.py` (F5, or `python main.py`); all parameters live in
+`src/config.py`. See [CLAUDE.md](CLAUDE.md) for the full workflow.
 
 ## Roadmap
 

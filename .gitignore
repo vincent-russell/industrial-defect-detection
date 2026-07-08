@@ -15,7 +15,7 @@ env/
 
 # Data, models, and outputs (large or regenerated)
 data/
-checkpoints/
+models/
 results/
 
 # Secrets
