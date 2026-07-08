@@ -8,6 +8,7 @@ show up later as places the student cannot match the teacher.
 
 from __future__ import annotations
 
+import json
 import random
 from pathlib import Path
 
@@ -46,15 +47,54 @@ def resolve_device() -> torch.device:
     return torch.device(config.DEVICE)
 
 
-def train() -> Path:
-    """Train the student on the category's normal images and save its weights.
+def save_history(history: dict[str, list[float]], path: Path | None = None) -> Path:
+    """Write the training history to a self-describing JSON file under `results/`.
 
-    Reads the run parameters from `config`, trains for `config.EPOCHS`, and
-    writes the student `state_dict` to `config.STUDENT_WEIGHTS`.
+    Records the run configuration alongside the per-epoch arrays, so the file is
+    interpretable on its own and can be plotted later without a live model.
+
+    Args:
+        history (dict[str, list[float]]): Per-epoch arrays as built by `train`.
+        path (Path | None): Destination file, or None to derive a default name of
+            ``history_<backbone>_<category>.json`` under `config.RESULTS_DIR`.
 
     Returns:
-        Path: The path the trained student weights were saved to.
+        Path: The path the history was written to.
     """
+    if path is None:
+        path = config.RESULTS_DIR / f"history_{config.BACKBONE}_{config.CATEGORY}.json"
+    payload = {
+        "category": config.CATEGORY,
+        "backbone": config.BACKBONE,
+        "feature_layers": list(config.FEATURE_LAYERS),
+        "img_size": config.IMG_SIZE,
+        "epochs": config.EPOCHS,
+        **history,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+    return path
+
+
+def train() -> dict[str, list[float]]:
+    """Train the student on the category's normal images and save its weights.
+
+    Reads the run parameters from `config` and trains for `config.EPOCHS`,
+    recording the mean distillation loss each epoch. If `config.EVAL_EVERY_EPOCHS`
+    is positive, the model is also scored on the test split at that cadence (and
+    on the final epoch) as a convergence diagnostic — monitoring only, never used
+    for model selection or early stopping. Writes the student `state_dict` to
+    `config.STUDENT_WEIGHTS` and the per-epoch history to `results/`.
+
+    Returns:
+        dict[str, list[float]]: The training history, with keys ``epoch`` and
+            ``loss`` and, when per-epoch scoring is enabled, ``eval_epoch``,
+            ``image_auroc``, and ``pixel_auroc``.
+    """
+    # Local import breaks a cycle: evaluate imports resolve_device from this module.
+    from src import evaluate
+
     set_seed(config.SEED)
     device = resolve_device()
 
@@ -70,6 +110,13 @@ def train() -> Path:
     )
     print(f"Training on {len(samples)} normal '{config.CATEGORY}' images.")
 
+    # Load the test split once for the per-epoch diagnostic (empty if disabled).
+    eval_samples = (
+        data.load_samples(category=config.CATEGORY, split="test")
+        if config.EVAL_EVERY_EPOCHS > 0
+        else []
+    )
+
     model = STFPM(config.BACKBONE, config.FEATURE_LAYERS).to(device)
     optimizer = torch.optim.SGD(
         model.student.parameters(),
@@ -77,6 +124,10 @@ def train() -> Path:
         momentum=config.MOMENTUM,
         weight_decay=config.WEIGHT_DECAY,
     )
+
+    history: dict[str, list[float]] = {
+        "epoch": [], "loss": [], "eval_epoch": [], "image_auroc": [], "pixel_auroc": []
+    }
 
     model.train()
     for epoch in range(1, config.EPOCHS + 1):
@@ -92,9 +143,27 @@ def train() -> Path:
 
             running += loss.item() * images.size(0)
             seen += images.size(0)
-        print(f"epoch {epoch}/{config.EPOCHS}  loss={running / seen:.4f}")
+
+        epoch_loss = running / seen
+        history["epoch"].append(epoch)
+        history["loss"].append(epoch_loss)
+        msg = f"epoch {epoch}/{config.EPOCHS}  loss={epoch_loss:.4f}"
+
+        # Diagnostic scoring on the test split (restores train mode internally).
+        if eval_samples and (epoch % config.EVAL_EVERY_EPOCHS == 0 or epoch == config.EPOCHS):
+            scored = evaluate.score(model, eval_samples, device)
+            history["eval_epoch"].append(epoch)
+            history["image_auroc"].append(scored["image_auroc"])
+            history["pixel_auroc"].append(scored["pixel_auroc"])
+            msg += (
+                f"  image AUROC={scored['image_auroc']:.4f}"
+                f"  pixel AUROC={scored['pixel_auroc']:.4f}"
+            )
+        print(msg)
 
     config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
     torch.save(model.student.state_dict(), config.STUDENT_WEIGHTS)
     print(f"Saved student weights -> {config.STUDENT_WEIGHTS}")
-    return config.STUDENT_WEIGHTS
+    saved = save_history(history)
+    print(f"Saved training history -> {saved}")
+    return history

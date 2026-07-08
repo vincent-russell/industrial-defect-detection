@@ -8,6 +8,9 @@ achievable IoU. Ground-truth masks are used for scoring only — never training.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -84,26 +87,70 @@ def _resize_mask(mask: np.ndarray, size: int) -> np.ndarray:
     return np.asarray(resized) > 0
 
 
-def evaluate() -> dict[str, float]:
-    """Score the trained student over the category's test split.
+def save_metrics(results: dict[str, float], path: Path | None = None) -> Path:
+    """Write evaluation metrics to a self-describing JSON file under `results/`.
 
-    Pixel-level metrics are computed at `config.IMG_SIZE` resolution (both the
-    anomaly map and the ground-truth mask), which keeps memory modest and is the
-    resolution the model actually predicts at.
+    The saved payload records the run configuration (category, backbone, feature
+    layers, image size, epochs) alongside the metric values, so a result file is
+    interpretable on its own without consulting `config`.
+
+    Args:
+        results (dict[str, float]): Metrics as returned by `evaluate`.
+        path (Path | None): Destination file, or None to derive a default name
+            of ``metrics_<backbone>_<category>.json`` under `config.RESULTS_DIR`.
+
+    Returns:
+        Path: The path the metrics were written to.
+    """
+    if path is None:
+        path = config.RESULTS_DIR / f"metrics_{config.BACKBONE}_{config.CATEGORY}.json"
+    payload = {
+        "category": config.CATEGORY,
+        "backbone": config.BACKBONE,
+        "feature_layers": list(config.FEATURE_LAYERS),
+        "img_size": config.IMG_SIZE,
+        "epochs": config.EPOCHS,
+        **results,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+    return path
+
+
+@torch.no_grad()
+def score(
+    model: STFPM,
+    samples: list[data.VisaSample],
+    device: torch.device,
+    progress: bool = False,
+) -> dict[str, float]:
+    """Score a model over samples and return metrics, doing no I/O.
+
+    This is the pure scoring core shared by `evaluate` (full run, saves a file)
+    and by per-epoch monitoring during training (called repeatedly, no output).
+    The model is switched to eval mode for scoring and restored to its previous
+    mode afterwards, so it is safe to call mid-training. Pixel-level metrics are
+    computed at `config.IMG_SIZE` resolution — both the anomaly map and the
+    ground-truth mask — which keeps memory modest and matches the resolution the
+    model actually predicts at.
+
+    Args:
+        model (STFPM): The model to score (trained or mid-training).
+        samples (list[data.VisaSample]): The test samples to score over.
+        device (torch.device): Device the model lives on.
+        progress (bool): If True, show a per-image progress bar.
 
     Returns:
         dict[str, float]: Metrics with keys ``image_auroc``, ``pixel_auroc``,
             ``best_iou``, and ``iou_threshold``.
     """
-    device = resolve_device()
-    model = load_model(device)
-
-    samples = data.load_samples(category=config.CATEGORY, split="test")
-    print(f"Evaluating on {len(samples)} test '{config.CATEGORY}' images.")
+    was_training = model.training
+    model.eval()
 
     image_scores, image_labels = [], []
     pixel_maps, pixel_masks = [], []
-    for sample in tqdm(samples, desc="evaluating", leave=False):
+    for sample in tqdm(samples, desc="scoring", leave=False, disable=not progress):
         amap = predict(model, data.load_image(sample), device)
         image_scores.append(float(amap.max()))
         image_labels.append(int(sample.is_anomaly))
@@ -121,15 +168,36 @@ def evaluate() -> dict[str, float]:
     pixel_labels = np.concatenate([m.ravel() for m in pixel_masks])
     best, best_thr = metrics.best_iou(pixel_labels, pixel_scores)
 
-    results = {
+    if was_training:
+        model.train()
+
+    return {
         "image_auroc": metrics.roc_auc(np.array(image_labels), np.array(image_scores)),
         "pixel_auroc": metrics.roc_auc(pixel_labels, pixel_scores),
         "best_iou": best,
         "iou_threshold": best_thr,
     }
+
+
+def evaluate() -> dict[str, float]:
+    """Score the trained student over the category's test split and save metrics.
+
+    Returns:
+        dict[str, float]: Metrics with keys ``image_auroc``, ``pixel_auroc``,
+            ``best_iou``, and ``iou_threshold``.
+    """
+    device = resolve_device()
+    model = load_model(device)
+
+    samples = data.load_samples(category=config.CATEGORY, split="test")
+    print(f"Evaluating on {len(samples)} test '{config.CATEGORY}' images.")
+
+    results = score(model, samples, device, progress=True)
     print(
         f"image AUROC={results['image_auroc']:.4f}  "
         f"pixel AUROC={results['pixel_auroc']:.4f}  "
         f"best IoU={results['best_iou']:.4f} @ thr={results['iou_threshold']:.4g}"
     )
+    saved = save_metrics(results)
+    print(f"Saved metrics -> {saved}")
     return results

@@ -13,7 +13,7 @@ from pathlib import Path
 # =============================================================================
 
 # Data selection
-CATEGORY = "candle"   # VisA object category (see CATEGORIES in src/data.py)
+CATEGORY = "cashew"   # VisA object category (see CATEGORIES in src/data.py)
 
 # Model — a frozen ImageNet teacher and a same-architecture student are compared
 # across a feature pyramid (student-teacher feature-pyramid matching, STFPM).
@@ -31,9 +31,18 @@ MOMENTUM = 0.9
 WEIGHT_DECAY = 1e-4
 NUM_WORKERS = 4
 
+# Diagnostic: track image/pixel AUROC on the test split every N epochs during
+# training (0 disables). Monitoring only — never used for model selection or
+# early stopping, so it does not leak into the reported result.
+EVAL_EVERY_EPOCHS = 10
+
 # Evaluation — the anomaly map is smoothed before scoring; sigma in pixels at
 # IMG_SIZE resolution (0 disables smoothing).
 SMOOTH_SIGMA = 4.0
+
+# Qualitative figures — how many test examples to render in the results panel
+# (anomalies, evenly spaced across the test split, plus one normal for contrast).
+NUM_FIGURE_EXAMPLES = 6
 
 # Reproducibility
 SEED = 0
