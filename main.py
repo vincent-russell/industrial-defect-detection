@@ -10,32 +10,22 @@ what a run does — this file reads them, it does not define them.
 
 from __future__ import annotations
 
-import config
-from src import data, evaluate, train, visualize
+from src import data, sweep
 
 
 def main() -> None:
-    """Run the STFPM pipeline end to end for the configured category.
+    """Run the STFPM pipeline over all 12 VisA categories and aggregate.
 
-    Ensures VisA is available, trains the student on normal images if it has not
-    been trained yet (saving training curves to `results/`), evaluates it on the
-    test split (saving metrics to `results/`), and renders a qualitative example
-    panel there too. Delete the saved weights (or change
-    `config.BACKBONE`/`config.CATEGORY`) to force retraining.
+    Ensures VisA is available, then sweeps every category: for each one it trains
+    the student on normal images (unless weights already exist), evaluates on the
+    test split, and renders a qualitative example panel — all under `results/`.
+    Finally it writes a `summary_<backbone>.json` with the per-category metrics
+    and their category-mean image/pixel AUROC, the numbers to compare against the
+    published VisA leaderboard. Delete a category's saved weights to force it to
+    retrain; to run a single category instead, call `sweep.run_category(name)`.
     """
     data.download_visa()
-
-    if not config.STUDENT_WEIGHTS.exists():
-        history = train.train()
-        curves = visualize.save_training_curves(history)
-        print(f"Saved training curves -> {curves}")
-    else:
-        print(f"Using existing student weights: {config.STUDENT_WEIGHTS}")
-
-    evaluate.evaluate()
-
-    figure = visualize.save_examples()
-    print(f"Saved example figure -> {figure}")
+    sweep.sweep()
 
 
 if __name__ == "__main__":

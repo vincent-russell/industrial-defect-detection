@@ -49,7 +49,7 @@ SPLIT_CSV_URL = "https://raw.githubusercontent.com/amazon-science/spot-diff/main
 
 # The 12 object categories, in the dataset's own order.
 CATEGORIES = (
-    "candle", "capsules", "cashew", "chewing_gum", "fryum", "macaroni1",
+    "candle", "capsules", "cashew", "chewinggum", "fryum", "macaroni1",
     "macaroni2", "pcb1", "pcb2", "pcb3", "pcb4", "pipe_fryum",
 )
 
