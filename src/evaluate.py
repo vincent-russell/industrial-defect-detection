@@ -13,8 +13,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-import torch.nn.functional as F
-from PIL import Image
 from torchvision.transforms.functional import gaussian_blur
 from tqdm import tqdm
 
@@ -71,27 +69,10 @@ def predict(model: STFPM, image: np.ndarray, device: torch.device) -> np.ndarray
     return amap.squeeze().cpu().numpy()
 
 
-def _resize_mask(mask: np.ndarray, size: int) -> np.ndarray:
-    """Nearest-neighbour resize a boolean mask to a square of side `size`.
-
-    Args:
-        mask (np.ndarray): Boolean mask of shape (H, W).
-        size (int): Target side length.
-
-    Returns:
-        np.ndarray: Boolean mask of shape (size, size).
-    """
-    resized = Image.fromarray(mask.astype(np.uint8)).resize(
-        (size, size), Image.NEAREST
-    )
-    return np.asarray(resized) > 0
-
-
-def save_metrics(results: dict[str, float], path: Path | None = None) -> Path:
+def _save_metrics(results: dict[str, float], path: Path | None = None) -> Path:
     """Write evaluation metrics to a self-describing JSON file under `results/`.
 
-    The saved payload records the run configuration (category, backbone, feature
-    layers, image size, epochs) alongside the metric values, so a result file is
+    Records the run configuration alongside the metric values, so the file is
     interpretable on its own without consulting `config`.
 
     Args:
@@ -127,13 +108,11 @@ def score(
 ) -> dict[str, float]:
     """Score a model over samples and return metrics, doing no I/O.
 
-    This is the pure scoring core shared by `evaluate` (full run, saves a file)
-    and by per-epoch monitoring during training (called repeatedly, no output).
-    The model is switched to eval mode for scoring and restored to its previous
-    mode afterwards, so it is safe to call mid-training. Pixel-level metrics are
-    computed at `config.IMG_SIZE` resolution — both the anomaly map and the
-    ground-truth mask — which keeps memory modest and matches the resolution the
-    model actually predicts at.
+    The pure scoring core shared by `evaluate` (full run, saves a file) and by
+    per-epoch monitoring during training. Switches the model to eval mode and
+    restores its previous mode afterwards, so it is safe to call mid-training.
+    Pixel metrics are computed at `config.IMG_SIZE` — the resolution the model
+    predicts at — for both the anomaly map and the ground-truth mask.
 
     Args:
         model (STFPM): The model to score (trained or mid-training).
@@ -157,7 +136,7 @@ def score(
 
         mask = data.load_mask(sample)
         gt = (
-            _resize_mask(mask, config.IMG_SIZE)
+            data.resize_mask(mask, config.IMG_SIZE)
             if mask is not None
             else np.zeros_like(amap, dtype=bool)
         )
@@ -198,6 +177,6 @@ def evaluate() -> dict[str, float]:
         f"pixel AUROC={results['pixel_auroc']:.4f}  "
         f"best IoU={results['best_iou']:.4f} @ thr={results['iou_threshold']:.4g}"
     )
-    saved = save_metrics(results)
+    saved = _save_metrics(results)
     print(f"Saved metrics -> {saved}")
     return results

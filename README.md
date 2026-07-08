@@ -44,9 +44,9 @@ ground-truth masks for the defects. Training uses the official one-class split
 
 ```text
 industrial-defect-detection/
-├── main.py       # entry point: download → train → evaluate
+├── main.py       # entry point: download → train + evaluate every category
 ├── config.py     # editable run parameters (flat constants)
-├── src/          # Python modules: data, model, train, evaluate, metrics
+├── src/          # Python modules: data, model, train, evaluate, metrics, sweep, visualize
 ├── assets/       # curated figures committed for this README
 ├── models/       # trained student weights (gitignored)
 ├── data/         # dataset cache (gitignored)

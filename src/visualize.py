@@ -40,20 +40,6 @@ def _resize_rgb(image: np.ndarray, size: int) -> np.ndarray:
     return np.asarray(Image.fromarray(image).resize((size, size), Image.BILINEAR))
 
 
-def _resize_mask(mask: np.ndarray, size: int) -> np.ndarray:
-    """Nearest-neighbour resize a boolean mask to a square of side `size`.
-
-    Args:
-        mask (np.ndarray): Boolean mask of shape (H, W).
-        size (int): Target side length.
-
-    Returns:
-        np.ndarray: Boolean mask of shape (size, size).
-    """
-    resized = Image.fromarray(mask.astype(np.uint8)).resize((size, size), Image.NEAREST)
-    return np.asarray(resized) > 0
-
-
 def _normalize(amap: np.ndarray) -> np.ndarray:
     """Min-max scale an anomaly map to [0, 1] for display.
 
@@ -140,7 +126,7 @@ def save_training_curves(
     return path
 
 
-def select_examples(
+def _select_examples(
     samples: list[data.VisaSample], count: int
 ) -> list[data.VisaSample]:
     """Pick a representative set of test samples to visualise.
@@ -192,7 +178,7 @@ def save_examples(path: Path | None = None) -> Path:
     device = resolve_device()
     model = load_model(device)
     samples = data.load_samples(category=config.CATEGORY, split="test")
-    examples = select_examples(samples, config.NUM_FIGURE_EXAMPLES)
+    examples = _select_examples(samples, config.NUM_FIGURE_EXAMPLES)
 
     size = config.IMG_SIZE
     titles = ("Input", "Ground truth", "Anomaly map")
@@ -204,7 +190,7 @@ def save_examples(path: Path | None = None) -> Path:
         disp = _resize_rgb(data.load_image(sample), size)
         amap = _normalize(predict(model, data.load_image(sample), device))
         mask = data.load_mask(sample)
-        gt = _resize_mask(mask, size) if mask is not None else np.zeros((size, size), bool)
+        gt = data.resize_mask(mask, size) if mask is not None else np.zeros((size, size), bool)
 
         # Column 0 — the input image, tagged with its true label on the y-axis.
         axes[row][0].imshow(disp)

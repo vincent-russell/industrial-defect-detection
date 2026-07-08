@@ -16,9 +16,9 @@ dataset root, i.e. the directory that holds the category folders):
     <root>/<category>/Data/Images/Anomaly/*.JPG
     <root>/<category>/Data/Masks/Anomaly/*.png      # masks only for anomalies
 
-Pure Python. Everything runs locally: the ~16 GB tarball downloads and extracts
-under `data/` (gitignored). Budget disk and time for the first download; it is
-idempotent, so reruns are cheap.
+Pure Python, all local: the ~16 GB tarball downloads and extracts under `data/`
+(gitignored) on first use. Download and extraction are idempotent, so reruns
+are cheap.
 """
 
 from __future__ import annotations
@@ -269,6 +269,20 @@ def load_mask(sample: VisaSample) -> np.ndarray | None:
         return None
     with Image.open(sample.mask_path) as m:
         return np.asarray(m.convert("L")) > 0
+
+
+def resize_mask(mask: np.ndarray, size: int) -> np.ndarray:
+    """Nearest-neighbour resize a boolean mask to a square of side `size`.
+
+    Args:
+        mask (np.ndarray): Boolean mask of shape (H, W).
+        size (int): Target side length in pixels.
+
+    Returns:
+        np.ndarray: Boolean mask of shape (size, size).
+    """
+    resized = Image.fromarray(mask.astype(np.uint8)).resize((size, size), Image.NEAREST)
+    return np.asarray(resized) > 0
 
 
 # --- Torch dataset ------------------------------------------------------------

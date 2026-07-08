@@ -49,9 +49,8 @@ def run_category(category: str, figures: bool = True) -> dict[str, float]:
     """Train (if needed) and evaluate one category, returning its metrics.
 
     Trains the student on the category's normal images only when no weights are
-    saved yet (saving the training curves), then always evaluates on the test
-    split. Optionally renders the qualitative example panel too. This mirrors the
-    single-category `main.py` flow for one category.
+    saved yet (also saving the training curves), then always evaluates on the
+    test split and optionally renders the qualitative example panel.
 
     Args:
         category (str): VisA category to run; must be in `data.CATEGORIES`.
@@ -76,7 +75,7 @@ def run_category(category: str, figures: bool = True) -> dict[str, float]:
     return results
 
 
-def save_summary(rows: list[dict], path: Path | None = None) -> Path:
+def _save_summary(rows: list[dict], path: Path | None = None) -> Path:
     """Write the per-category rows and their category means to one JSON file.
 
     The payload records the run configuration, one row per category, and the
@@ -149,7 +148,7 @@ def sweep(
         figures (bool): If True, also render each category's example panel.
 
     Returns:
-        dict: The summary payload as written by `save_summary`, including the
+        dict: The summary payload as written by `_save_summary`, including the
             per-category ``categories`` rows and the ``mean`` over categories.
     """
     rows: list[dict] = []
@@ -157,7 +156,7 @@ def sweep(
         results = run_category(category, figures=figures)
         rows.append({"category": category, **{k: results[k] for k in _METRIC_KEYS}})
 
-    path = save_summary(rows)
+    path = _save_summary(rows)
     with open(path, encoding="utf-8") as f:
         summary = json.load(f)
     _print_table(rows, summary["mean"])

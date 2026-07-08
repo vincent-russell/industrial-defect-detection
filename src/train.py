@@ -23,7 +23,7 @@ from src.data import VisaDataset, build_transform
 from src.model import STFPM, distillation_loss
 
 
-def set_seed(seed: int) -> None:
+def _set_seed(seed: int) -> None:
     """Seed Python, numpy, and torch RNGs for reproducible runs.
 
     Args:
@@ -47,7 +47,7 @@ def resolve_device() -> torch.device:
     return torch.device(config.DEVICE)
 
 
-def save_history(history: dict[str, list[float]], path: Path | None = None) -> Path:
+def _save_history(history: dict[str, list[float]], path: Path | None = None) -> Path:
     """Write the training history to a self-describing JSON file under `results/`.
 
     Records the run configuration alongside the per-epoch arrays, so the file is
@@ -88,14 +88,14 @@ def train() -> dict[str, list[float]]:
     `config.STUDENT_WEIGHTS` and the per-epoch history to `results/`.
 
     Returns:
-        dict[str, list[float]]: The training history, with keys ``epoch`` and
-            ``loss`` and, when per-epoch scoring is enabled, ``eval_epoch``,
-            ``image_auroc``, and ``pixel_auroc``.
+        dict[str, list[float]]: Training history keyed by ``epoch`` and ``loss``,
+            plus ``eval_epoch``, ``image_auroc``, and ``pixel_auroc`` arrays that
+            stay empty unless per-epoch scoring is enabled.
     """
     # Local import breaks a cycle: evaluate imports resolve_device from this module.
     from src import evaluate
 
-    set_seed(config.SEED)
+    _set_seed(config.SEED)
     device = resolve_device()
 
     samples = data.load_samples(
@@ -164,6 +164,6 @@ def train() -> dict[str, list[float]]:
     config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
     torch.save(model.student.state_dict(), config.STUDENT_WEIGHTS)
     print(f"Saved student weights -> {config.STUDENT_WEIGHTS}")
-    saved = save_history(history)
+    saved = _save_history(history)
     print(f"Saved training history -> {saved}")
     return history
