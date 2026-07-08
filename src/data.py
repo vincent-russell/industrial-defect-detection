@@ -1,4 +1,4 @@
-"""VisA dataset: download, official split, and sample loading.
+"""VisA dataset: download, official split, sample loading, and a torch dataset.
 
 VisA (Zou et al., ECCV 2022) is a visual anomaly benchmark of 12 object
 categories. Each category has *normal* and *anomaly* images, plus pixel-level
@@ -31,9 +31,15 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from torch.utils.data import Dataset
+from torchvision import transforms
 from tqdm import tqdm
 
 import config
+
+# ImageNet statistics — the teacher backbone was pretrained with these.
+IMAGENET_MEAN = (0.485, 0.456, 0.406)
+IMAGENET_STD = (0.229, 0.224, 0.225)
 
 # --- Sources (verified live 2026-06) ------------------------------------------
 
@@ -263,3 +269,65 @@ def load_mask(sample: VisaSample) -> np.ndarray | None:
         return None
     with Image.open(sample.mask_path) as m:
         return np.asarray(m.convert("L")) > 0
+
+
+# --- Torch dataset ------------------------------------------------------------
+
+def build_transform(img_size: int) -> transforms.Compose:
+    """Build the image transform: resize to a square, tensor, ImageNet-normalise.
+
+    Args:
+        img_size (int): Side length in pixels of the square model input.
+
+    Returns:
+        transforms.Compose: Callable mapping an (H, W, 3) uint8 RGB array to a
+            normalised float tensor of shape (3, img_size, img_size).
+    """
+    return transforms.Compose(
+        [
+            transforms.ToPILImage(),
+            transforms.Resize((img_size, img_size)),
+            transforms.ToTensor(),
+            transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
+        ]
+    )
+
+
+class VisaDataset(Dataset):
+    """A torch dataset of VisA images (no labels — training uses normals only).
+
+    Attributes:
+        samples (list[VisaSample]): The samples to serve.
+        transform (transforms.Compose): Transform applied to each loaded image.
+    """
+
+    def __init__(self, samples: list[VisaSample], transform: transforms.Compose):
+        """Wrap a list of samples with an image transform.
+
+        Args:
+            samples (list[VisaSample]): Samples to serve, typically the normal
+                training images for one category.
+            transform (transforms.Compose): Transform from `build_transform`.
+        """
+        self.samples = samples
+        self.transform = transform
+
+    def __len__(self) -> int:
+        """Return the number of samples.
+
+        Returns:
+            int: Sample count.
+        """
+        return len(self.samples)
+
+    def __getitem__(self, index: int):
+        """Load and transform the image at `index`.
+
+        Args:
+            index (int): Position in `samples`.
+
+        Returns:
+            torch.Tensor: Normalised image tensor of shape (3, H, W).
+        """
+        image = load_image(self.samples[index])
+        return self.transform(np.ascontiguousarray(image))

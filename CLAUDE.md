@@ -3,10 +3,11 @@
 Context for AI-assisted development, and a quick orientation for anyone reading the repo.
 
 ## What this project is
-Pixel-level segmentation of manufacturing defects on the **VisA** benchmark using Meta AI's
-**Segment Anything Model (SAM)**, compared against a simple anomaly-detection baseline.
-Goal: a clean, reproducible, well-documented computer-vision pipeline — not state-of-the-art
-performance.
+Pixel-level detection of manufacturing defects on the **VisA** benchmark using
+**Student–Teacher Feature-Pyramid Matching (STFPM)** — a frozen ImageNet teacher backbone
+and a same-architecture student trained on *normal* images only; anomalies show up as
+places the student fails to match the teacher across a feature pyramid. Goal: a clean,
+reproducible, documented pipeline, not state-of-the-art numbers.
 
 ## How development works
 Everything runs locally on a machine with an NVIDIA GPU.
@@ -17,8 +18,8 @@ Everything runs locally on a machine with an NVIDIA GPU.
 - **Parameters live in `config.py`** at the repo root — a flat module of plain,
   editable values (constants), *not* classes or functions and *not* YAML. It is
   the one obvious place to change a run; `main.py` and `src/` read from it.
-- **Run SAM on the local GPU:** inference uses CUDA directly. Pick the SAM variant to fit
-  available VRAM (`vit_b`/`vit_l` are lighter than `vit_h`).
+- **Train and run on the local GPU:** training and inference use CUDA directly. Pick the
+  backbone to fit available VRAM (`resnet18`/`resnet34` are lighter than `wide_resnet50_2`).
 - **Storage:** code → GitHub; dataset (~16 GB), model weights, and bulky outputs → local
   gitignored dirs (`data/`, `models/`, `results/`); curated showcase figures → `assets/`.
 
@@ -37,7 +38,7 @@ main.py       entry point (wires the pipeline)
 config.py     editable run parameters (flat constants)
 src/          pure-Python modules (logic)
 assets/       curated figures committed for the README
-models/       pretrained SAM weights (gitignored)
+models/       trained student weights (gitignored)
 data/         dataset cache (gitignored)
 results/      generated outputs (gitignored)
 ```
@@ -46,8 +47,11 @@ results/      generated outputs (gitignored)
 1. [x] Repository setup (README, .gitignore, MIT license, first push)
 2. [x] Folder structure + workflow
 3. [x] VisA download + loader (verify the live source URL before hardcoding; dataset ~16 GB)
-4. [ ] Single end-to-end SAM inference example (local GPU)
-5. [ ] Simple baseline + evaluation (IoU)
+4. [x] STFPM model + training on normal images (local GPU)
+5. [x] Evaluation (image/pixel ROC AUC, IoU)
+6. [ ] Result figures and qualitative examples
 
 ## Dataset
 VisA (Zou et al., ECCV 2022) — https://github.com/amazon-science/spot-diff
+Training uses the official one-class split (`1cls`): normal-only in train, normal +
+anomalous in test. STFPM: Wang et al., BMVC 2021.

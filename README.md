@@ -1,27 +1,41 @@
-# Industrial Defect Detection with Segment Anything (SAM)
+# Industrial Defect Detection with Student–Teacher Feature Matching (STFPM)
 
-Pixel-level segmentation of manufacturing defects on the **VisA** benchmark, using
-Meta AI's **Segment Anything Model (SAM)** — compared against a simple anomaly-detection
-baseline.
+Pixel-level detection of manufacturing defects on the **VisA** benchmark, using
+**Student–Teacher Feature-Pyramid Matching (STFPM)**, trained on defect-free images.
 
-> 🚧 **Status:** work in progress. This repo is being built step by step as a clean,
-> well-documented example of a modern computer-vision workflow.
+> 🚧 **Status:** work in progress.
 
 ## Overview
 
-Industrial inspection asks a simple question: *given a photo of a part, which pixels
-(if any) are defective?* This project explores answering it with a vision foundation
-model (SAM) rather than a model trained from scratch, and measures how that compares to
-a straightforward baseline.
+The task: given a photo of a part, identify which pixels (if any) are defective. Defects
+are rare and varied, so the approach is **anomaly detection** — model normal appearance
+and flag deviations.
 
-The emphasis is on a **clean, reproducible, well-explained pipeline** — not on
-state-of-the-art numbers.
+A frozen ImageNet backbone (the *teacher*) defines a reference feature space. A second
+backbone of the same architecture (the *student*) is trained to reproduce the teacher's
+features on normal images only. At test time, pixels where the student fails to match the
+teacher — across several feature-pyramid levels — are scored as anomalous. Defect masks
+are used for evaluation only, never for training.
+
+## Method
+
+- **Teacher / student:** identical backbones (default ResNet-18); the teacher is frozen
+  with ImageNet weights, the student is trained from scratch.
+- **Objective:** on normal images, minimise the distance between L2-normalised teacher
+  and student feature maps at each pyramid level.
+- **Anomaly map:** per-level teacher–student discrepancies are upsampled and multiplied,
+  so a pixel scores high only where multiple scales agree — small defects surface at
+  shallow levels, structural ones at deep levels.
+- **Metrics:** image-level ROC AUC, pixel-level ROC AUC, and best-achievable IoU.
+
+> Wang et al., *Student-Teacher Feature Pyramid Matching for Anomaly Detection*, BMVC 2021.
 
 ## Dataset
 
 [**VisA (Visual Anomaly)**](https://github.com/amazon-science/spot-diff) — ~10,800 images
 across 12 object categories, with normal and defective samples and pixel-level
-ground-truth masks for the defects.
+ground-truth masks for the defects. Training uses the official one-class split
+(`1cls`): **normal images only** in train, normal + anomalous in test.
 
 > Zou et al., *SPot-the-Difference Self-Supervised Pre-training for Anomaly Detection
 > and Segmentation*, ECCV 2022.
@@ -30,30 +44,30 @@ ground-truth masks for the defects.
 
 ```text
 industrial-defect-detection/
-├── main.py       # entry point: wires the pipeline together
+├── main.py       # entry point: download → train → evaluate
 ├── config.py     # editable run parameters (flat constants)
-├── src/          # Python modules (pure Python): data, SAM, baseline, evaluation
+├── src/          # Python modules: data, model, train, evaluate, metrics
 ├── assets/       # curated figures committed for this README
-├── models/       # pretrained SAM weights (gitignored)
+├── models/       # trained student weights (gitignored)
 ├── data/         # dataset cache (gitignored)
 └── results/      # generated outputs (gitignored)
 ```
 
-Everything runs locally in VS Code, with SAM inference on a local NVIDIA GPU.
+Everything runs locally in VS Code, with training and inference on a local NVIDIA GPU.
 Run the pipeline from `main.py` (F5, or `python main.py`); all parameters live in
 `config.py`. See [CLAUDE.md](CLAUDE.md) for the full workflow.
 
 ## Roadmap
 
 - [x] Repository setup
-- [ ] Download and load the VisA dataset
-- [ ] Single end-to-end SAM inference example
-- [ ] Simple baseline for comparison
-- [ ] Evaluation (IoU and friends)
+- [x] Download and load the VisA dataset
+- [x] Train STFPM on normal images (one category)
+- [x] Evaluation (image/pixel ROC AUC, IoU)
+- [ ] Result figures and qualitative examples
 
 ## Tech
 
-Python · PyTorch (CUDA) · Segment Anything (SAM)
+Python · PyTorch (CUDA) · torchvision
 
 ## License
 

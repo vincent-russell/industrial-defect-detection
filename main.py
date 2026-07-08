@@ -11,33 +11,24 @@ what a run does — this file reads them, it does not define them.
 from __future__ import annotations
 
 import config
-from src import data
+from src import data, evaluate, train
 
 
 def main() -> None:
-    """Download VisA if needed, then load and summarise the selected split.
+    """Run the STFPM pipeline end to end for the configured category.
 
-    Reads `config.CATEGORY` and `config.SPLIT` to choose what to load, prints a
-    normal/anomaly breakdown, and peeks at one anomalous sample with its mask.
+    Ensures VisA is available, trains the student on normal images if it has not
+    been trained yet, then evaluates it on the test split. Delete the saved
+    weights (or change `config.BACKBONE`/`config.CATEGORY`) to force retraining.
     """
     data.download_visa()
 
-    samples = data.load_samples(category=config.CATEGORY, split=config.SPLIT)
-    anomalies = [s for s in samples if s.is_anomaly]
-    print(
-        f"{config.CATEGORY} / {config.SPLIT}: {len(samples)} samples "
-        f"({len(anomalies)} anomalous, {len(samples) - len(anomalies)} normal)"
-    )
+    if not config.STUDENT_WEIGHTS.exists():
+        train.train()
+    else:
+        print(f"Using existing student weights: {config.STUDENT_WEIGHTS}")
 
-    # Peek at one anomalous sample and its ground-truth mask.
-    if anomalies:
-        sample = anomalies[0]
-        image = data.load_image(sample)
-        mask = data.load_mask(sample)
-        print(f"Example: {sample.image_path.name}  image={image.shape}", end="")
-        print(f"  mask={mask.shape}  defect_px={int(mask.sum())}" if mask is not None else "")
-
-    # Next: SAM inference + baseline + IoU evaluation (build order steps 4-5).
+    evaluate.evaluate()
 
 
 if __name__ == "__main__":

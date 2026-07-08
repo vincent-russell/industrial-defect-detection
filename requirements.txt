@@ -10,8 +10,4 @@ torchvision==0.27.1
 numpy==2.5.1
 pillow==12.3.0
 matplotlib==3.11.0
-opencv-python==5.0.0.93
 tqdm==4.68.3
-
-# Segment Anything Model (from GitHub, pinned to a commit for reproducibility)
-segment-anything @ git+https://github.com/facebookresearch/segment-anything.git@dca509fe793f601edb92606367a655c15ac00fdf

@@ -14,16 +14,26 @@ from pathlib import Path
 
 # Data selection
 CATEGORY = "candle"   # VisA object category (see CATEGORIES in src/data.py)
-SPLIT = "test"        # "train" or "test"
 
-# Segment Anything model
-SAM_VARIANT = "vit_b"  # "vit_b" | "vit_l" | "vit_h"  (VRAM footprint small -> large)
+# Model — a frozen ImageNet teacher and a same-architecture student are compared
+# across a feature pyramid (student-teacher feature-pyramid matching, STFPM).
+BACKBONE = "resnet18"  # "resnet18" | "resnet34" | "wide_resnet50_2"
+FEATURE_LAYERS = ("layer1", "layer2", "layer3")  # pyramid taps (shallow -> deep)
 DEVICE = "cuda"        # "cuda" or "cpu"
 
-# SAM automatic mask generation
-POINTS_PER_SIDE = 32
-PRED_IOU_THRESH = 0.88
-STABILITY_SCORE_THRESH = 0.95
+# Training — the student learns to reproduce the teacher's features on *normal*
+# images only. Defaults follow the STFPM paper (SGD, 256px, 100 epochs).
+IMG_SIZE = 256
+BATCH_SIZE = 32
+EPOCHS = 100
+LEARNING_RATE = 0.4
+MOMENTUM = 0.9
+WEIGHT_DECAY = 1e-4
+NUM_WORKERS = 4
+
+# Evaluation — the anomaly map is smoothed before scoring; sigma in pixels at
+# IMG_SIZE resolution (0 disables smoothing).
+SMOOTH_SIGMA = 4.0
 
 # Reproducibility
 SEED = 0
@@ -36,23 +46,9 @@ SEED = 0
 ROOT = Path(__file__).resolve().parent  # config.py lives at the repo root
 
 DATA_DIR = ROOT / "data"        # dataset cache (VisA tarball + extraction)
-MODELS_DIR = ROOT / "models"    # pretrained SAM weights (.pth), downloaded
-RESULTS_DIR = ROOT / "results"  # generated outputs (masks, figures, metrics)
+MODELS_DIR = ROOT / "models"    # trained student weights (.pth)
+RESULTS_DIR = ROOT / "results"  # generated outputs (maps, figures, metrics)
 ASSETS_DIR = ROOT / "assets"    # curated figures committed for the README
 
-
-# =============================================================================
-# SAM checkpoint reference — the weight files Meta publishes; rarely edited.
-# The active variant is chosen by SAM_VARIANT above.
-# =============================================================================
-
-SAM_CHECKPOINT_FILES = {
-    "vit_b": "sam_vit_b_01ec64.pth",
-    "vit_l": "sam_vit_l_0b3195.pth",
-    "vit_h": "sam_vit_h_4b8939.pth",
-}
-SAM_CHECKPOINT_URLS = {
-    "vit_b": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth",
-    "vit_l": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_l_0b3195.pth",
-    "vit_h": "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth",
-}
+# Where the trained student for the active backbone/category is saved and loaded.
+STUDENT_WEIGHTS = MODELS_DIR / f"stfpm_{BACKBONE}_{CATEGORY}.pth"
