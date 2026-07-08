@@ -12,8 +12,9 @@ from pathlib import Path
 # Run parameters — the knobs you actually tune between runs.
 # =============================================================================
 
-# Data selection
-CATEGORY = "cashew"   # VisA object category (see CATEGORIES in src/data.py)
+# Data selection — one VisA object category (see CATEGORIES in src/data.py), or
+# "all" to sweep every category and report the leaderboard-style category mean.
+CATEGORY = "cashew"   # e.g. "cashew" | "candle" | ... | "all"
 
 # Model — a frozen ImageNet teacher and a same-architecture student are compared
 # across a feature pyramid (student-teacher feature-pyramid matching, STFPM).

@@ -10,22 +10,27 @@ what a run does — this file reads them, it does not define them.
 
 from __future__ import annotations
 
+import config
 from src import data, sweep
 
 
 def main() -> None:
-    """Run the STFPM pipeline over all 12 VisA categories and aggregate.
+    """Run the STFPM pipeline for the category selected in `config.py`.
 
-    Ensures VisA is available, then sweeps every category: for each one it trains
-    the student on normal images (unless weights already exist), evaluates on the
-    test split, and renders a qualitative example panel — all under `results/`.
-    Finally it writes a `summary_<backbone>.json` with the per-category metrics
-    and their category-mean image/pixel AUROC, the numbers to compare against the
-    published VisA leaderboard. Delete a category's saved weights to force it to
-    retrain; to run a single category instead, call `sweep.run_category(name)`.
+    Ensures VisA is available, then dispatches on `config.CATEGORY`. A category
+    name (e.g. "cashew") runs that one category: it trains the student on its
+    normal images (unless weights already exist), evaluates on the test split,
+    and renders a qualitative example panel — all under `results/`. The sentinel
+    "all" does the same for every category and additionally writes a
+    `summary_<backbone>.json` with the per-category metrics and their
+    category-mean image/pixel AUROC, the numbers to compare against the published
+    VisA leaderboard. Delete a category's saved weights to force it to retrain.
     """
     data.download_visa()
-    sweep.sweep()
+    if config.CATEGORY == "all":
+        sweep.sweep()
+    else:
+        sweep.run_category(config.CATEGORY)
 
 
 if __name__ == "__main__":
