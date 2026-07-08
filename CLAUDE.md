@@ -10,14 +10,13 @@ performance.
 
 ## How development works
 Everything runs locally on a machine with an NVIDIA GPU.
-- **Write logic in `src/`** as pure Python modules.
-- **Run everything from `main.py`:** the single entry point imports from `src/`,
-  sets the run's parameters, and wires the pipeline together. Run it with F5 /
-  `python main.py`, or highlight a block and "Run Selection" to iterate.
-- **Parameters live in `src/config.py`** as a typed, frozen `Config` dataclass
-  (not YAML) — type-checked, IDE-navigable, with computed fields and a
-  `to_json` provenance dump. Override at the entry point, e.g.
-  `Config(sam_variant="vit_l")`.
+- **Write logic in `src/`** as pure Python modules (functions and classes).
+- **Run everything from `main.py`:** the single entry point imports from `src/`
+  and wires the pipeline together. Run it with F5 / `python main.py`, or
+  highlight a block and "Run Selection" to iterate.
+- **Parameters live in `config.py`** at the repo root — a flat module of plain,
+  editable values (constants), *not* classes or functions and *not* YAML. It is
+  the one obvious place to change a run; `main.py` and `src/` read from it.
 - **Run SAM on the local GPU:** inference uses CUDA directly. Pick the SAM variant to fit
   available VRAM (`vit_b`/`vit_l` are lighter than `vit_h`).
 - **Storage:** code → GitHub; dataset (~16 GB), model weights, and bulky outputs → local
@@ -25,12 +24,17 @@ Everything runs locally on a machine with an NVIDIA GPU.
 
 ## Conventions
 - `src/*.py` is **pure Python** — no `!`/`%` notebook magics.
+- **Docstrings: Google style, always** — every function and class has a docstring
+  with an imperative one-line summary and typed `Args:` / `Returns:` / `Raises:`
+  (or `Attributes:`) sections, e.g. `category (str): the object category`. Keep
+  this consistent across the whole codebase.
 - Large or regenerated artifacts (dataset, model weights, results) are gitignored.
 - Keep modules small and readable. Commits are authored by Vincent Russell, small and clear.
 
 ## Folder structure
 ```
-main.py       entry point (sets parameters, wires the pipeline)
+main.py       entry point (wires the pipeline)
+config.py     editable run parameters (flat constants)
 src/          pure-Python modules (logic)
 assets/       curated figures committed for the README
 models/       pretrained SAM weights (gitignored)

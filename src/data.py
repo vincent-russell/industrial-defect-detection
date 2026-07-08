@@ -33,7 +33,7 @@ import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
-from . import config
+import config
 
 # --- Sources (verified live 2026-06) ------------------------------------------
 
@@ -55,23 +55,46 @@ SPLIT_CSV = config.DATA_DIR / "split_csv_1cls.csv"
 
 @dataclass(frozen=True)
 class VisaSample:
-    """One labelled image, with absolute paths resolved on disk."""
+    """One labelled VisA image, with absolute paths resolved on disk.
 
-    category: str           # e.g. "candle"
-    split: str              # "train" or "test"
-    label: str              # "normal" or "anomaly"
+    Attributes:
+        category (str): Object category, e.g. "candle".
+        split (str): Dataset split, "train" or "test".
+        label (str): Sample label, "normal" or "anomaly".
+        image_path (Path): Absolute path to the RGB image on disk.
+        mask_path (Path | None): Absolute path to the ground-truth mask, or None
+            for normal samples (which have no defect mask).
+    """
+
+    category: str
+    split: str
+    label: str
     image_path: Path
-    mask_path: Path | None  # ground-truth mask; None for normal samples
+    mask_path: Path | None
 
     @property
     def is_anomaly(self) -> bool:
+        """Whether this sample is labelled as an anomaly.
+
+        Returns:
+            bool: True if the label is "anomaly", False otherwise.
+        """
         return self.label == "anomaly"
 
 
 # --- Download / extract -------------------------------------------------------
 
 def _download(url: str, dest: Path) -> None:
-    """Stream `url` to `dest` with a progress bar (skips if already present)."""
+    """Stream a URL to a local file with a progress bar.
+
+    Downloads to a temporary ``.part`` file and renames it into place only on
+    success, so an interrupted download never looks complete. Skips the work
+    entirely if `dest` already exists.
+
+    Args:
+        url (str): Source URL to download from.
+        dest (Path): Destination path to write the file to.
+    """
     if dest.exists():
         print(f"Already downloaded: {dest}")
         return
@@ -90,10 +113,17 @@ def _download(url: str, dest: Path) -> None:
 
 
 def _find_dataset_root(search_dir: Path) -> Path | None:
-    """Locate the directory holding the category folders.
+    """Locate the directory that holds the VisA category folders.
 
     The tar's top-level folder name isn't something we want to hardcode, so we
     search instead: a directory is the dataset root if it contains "candle".
+
+    Args:
+        search_dir (Path): Directory to search, either the dataset root itself
+            or its immediate parent.
+
+    Returns:
+        Path | None: The dataset root, or None if no category folders were found.
     """
     if (search_dir / "candle").is_dir():
         return search_dir
@@ -104,14 +134,21 @@ def _find_dataset_root(search_dir: Path) -> Path | None:
 
 
 def download_visa(keep_tar: bool = False) -> Path:
-    """Download and extract VisA; return the dataset root (dir of categories).
+    """Download and extract VisA, returning the dataset root.
 
     Idempotent: skips the download if the tar is present and skips extraction if
-    the categories are already on disk. Set `keep_tar=False` (default) to delete
-    the ~16 GB archive after extracting.
-    """
-    config.ensure_dirs()
+    the categories are already on disk.
 
+    Args:
+        keep_tar (bool): If False (default), delete the ~16 GB archive after
+            extracting; if True, keep it on disk.
+
+    Returns:
+        Path: The dataset root, i.e. the directory holding the category folders.
+
+    Raises:
+        RuntimeError: If extraction finishes but no category folders are found.
+    """
     root = _find_dataset_root(VISA_DIR) if VISA_DIR.exists() else None
     if root is not None:
         print(f"VisA already extracted at: {root}")
@@ -142,11 +179,24 @@ def load_samples(
     split: str | None = None,
     label: str | None = None,
 ) -> list[VisaSample]:
-    """Return VisA samples from the official 1-class split, optionally filtered.
+    """Load VisA samples from the official 1-class split, optionally filtered.
 
-    Resolves every image/mask to an absolute path under the extracted dataset.
-    Downloads the small split CSV on first use; assumes the images themselves
-    are already extracted (call `download_visa()` first).
+    Resolves every image and mask to an absolute path under the extracted
+    dataset. Downloads the small split CSV on first use; assumes the images
+    themselves are already extracted (call `download_visa` first).
+
+    Args:
+        category (str | None): Restrict to this object category, or None for all.
+            Must be one of `CATEGORIES` if given.
+        split (str | None): Restrict to "train" or "test", or None for both.
+        label (str | None): Restrict to "normal" or "anomaly", or None for both.
+
+    Returns:
+        list[VisaSample]: The matching samples, each with paths resolved on disk.
+
+    Raises:
+        ValueError: If `category` is given but not a known VisA category.
+        FileNotFoundError: If the extracted VisA images cannot be found.
     """
     if category is not None and category not in CATEGORIES:
         raise ValueError(f"Unknown category {category!r}; choose from {CATEGORIES}")
@@ -184,16 +234,30 @@ def load_samples(
 # --- Pixel loaders ------------------------------------------------------------
 
 def load_image(sample: VisaSample) -> np.ndarray:
-    """Load a sample's image as an RGB uint8 array, shape (H, W, 3)."""
+    """Load a sample's image as an RGB array.
+
+    Args:
+        sample (VisaSample): The sample whose image should be loaded.
+
+    Returns:
+        np.ndarray: The image as a uint8 array of shape (H, W, 3).
+    """
     with Image.open(sample.image_path) as im:
         return np.asarray(im.convert("RGB"))
 
 
 def load_mask(sample: VisaSample) -> np.ndarray | None:
-    """Load a sample's ground-truth mask as a boolean array (H, W).
+    """Load a sample's ground-truth defect mask as a boolean array.
 
-    Returns None for normal samples (which have no mask). VisA masks are stored
-    with non-zero pixels marking the defect, so we threshold at > 0.
+    VisA masks store non-zero pixels where the defect is, so we threshold at
+    ``> 0`` to get a clean boolean mask.
+
+    Args:
+        sample (VisaSample): The sample whose mask should be loaded.
+
+    Returns:
+        np.ndarray | None: A boolean array of shape (H, W) where True marks
+            defect pixels, or None for normal samples (which have no mask).
     """
     if sample.mask_path is None:
         return None

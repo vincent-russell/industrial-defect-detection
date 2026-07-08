@@ -2,30 +2,30 @@
 
 Run the whole thing from here — press F5 in VS Code (or `python main.py`), or
 highlight a block and "Run Selection" to iterate interactively. All logic lives
-in `src/`; this file only wires it together and sets the run's parameters.
+in `src/`; this file only wires it together.
 
-Parameters come from `src.config.Config`. Edit `CFG` below (or construct it with
-overrides, e.g. `Config(sam_variant="vit_l", category="pcb1")`) to change a run.
+Parameters live in `config.py` at the repo root. Edit the values there to change
+what a run does — this file reads them, it does not define them.
 """
 
 from __future__ import annotations
 
-from src import config, data
-from src.config import Config
-
-# Parameters for this run — the one place to change what happens.
-CFG = Config()
+import config
+from src import data
 
 
-def main(cfg: Config = CFG) -> None:
-    """Download VisA if needed, then load and summarise the selected split."""
-    config.ensure_dirs()
+def main() -> None:
+    """Download VisA if needed, then load and summarise the selected split.
+
+    Reads `config.CATEGORY` and `config.SPLIT` to choose what to load, prints a
+    normal/anomaly breakdown, and peeks at one anomalous sample with its mask.
+    """
     data.download_visa()
 
-    samples = data.load_samples(category=cfg.category, split=cfg.split)
+    samples = data.load_samples(category=config.CATEGORY, split=config.SPLIT)
     anomalies = [s for s in samples if s.is_anomaly]
     print(
-        f"{cfg.category} / {cfg.split}: {len(samples)} samples "
+        f"{config.CATEGORY} / {config.SPLIT}: {len(samples)} samples "
         f"({len(anomalies)} anomalous, {len(samples) - len(anomalies)} normal)"
     )
 
