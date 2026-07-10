@@ -1,9 +1,8 @@
 """Train the STFPM student on normal images for one category.
 
-The teacher is frozen; only the student is optimised, learning to reproduce the
-teacher's feature maps on defect-free images. Nothing anomalous is seen during
-training — the model simply builds a representation of "normal", and anomalies
-show up later as places the student cannot match the teacher.
+Only the student is optimised, learning to reproduce the frozen teacher's
+feature maps on defect-free images; no anomalous images are seen during
+training.
 """
 
 from __future__ import annotations
@@ -18,9 +17,9 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 import config
-from src import data
+from src import data, evaluate
 from src.data import VisaDataset, build_transform
-from src.model import STFPM, distillation_loss
+from src.model import STFPM, distillation_loss, resolve_device
 
 
 def _set_seed(seed: int) -> None:
@@ -35,31 +34,16 @@ def _set_seed(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
 
 
-def resolve_device() -> torch.device:
-    """Return the configured device, falling back to CPU if CUDA is unavailable.
-
-    Returns:
-        torch.device: The device to run on.
-    """
-    if config.DEVICE == "cuda" and not torch.cuda.is_available():
-        print("CUDA requested but not available; falling back to CPU.")
-        return torch.device("cpu")
-    return torch.device(config.DEVICE)
-
-
 def _save_history(history: dict[str, list[float]], path: Path | None = None) -> Path:
-    """Write the training history to a self-describing JSON file under `results/`.
-
-    Records the run configuration alongside the per-epoch arrays, so the file is
-    interpretable on its own and can be plotted later without a live model.
+    """Write the training history, with its run configuration, to JSON.
 
     Args:
         history (dict[str, list[float]]): Per-epoch arrays as built by `train`.
-        path (Path | None): Destination file, or None to derive a default name of
+        path (Path | None): Destination file, or None for the default
             ``history_<backbone>_<category>.json`` under `config.RESULTS_DIR`.
 
     Returns:
-        Path: The path the history was written to.
+        Path: The path written to.
     """
     if path is None:
         path = config.RESULTS_DIR / f"history_{config.BACKBONE}_{config.CATEGORY}.json"
@@ -80,21 +64,17 @@ def _save_history(history: dict[str, list[float]], path: Path | None = None) -> 
 def train() -> dict[str, list[float]]:
     """Train the student on the category's normal images and save its weights.
 
-    Reads the run parameters from `config` and trains for `config.EPOCHS`,
-    recording the mean distillation loss each epoch. If `config.EVAL_EVERY_EPOCHS`
-    is positive, the model is also scored on the test split at that cadence (and
-    on the final epoch) as a convergence diagnostic — monitoring only, never used
-    for model selection or early stopping. Writes the student `state_dict` to
-    `config.STUDENT_WEIGHTS` and the per-epoch history to `results/`.
+    Trains for `config.EPOCHS`, recording the mean distillation loss each
+    epoch. If `config.EVAL_EVERY_EPOCHS` is positive, the model is also scored
+    on the test split at that cadence as a convergence diagnostic (monitoring
+    only, never used for model selection). Writes the student weights to
+    `config.STUDENT_WEIGHTS` and the history to `config.RESULTS_DIR`.
 
     Returns:
-        dict[str, list[float]]: Training history keyed by ``epoch`` and ``loss``,
-            plus ``eval_epoch``, ``image_auroc``, and ``pixel_auroc`` arrays that
+        dict[str, list[float]]: History keyed by ``epoch`` and ``loss``, plus
+            ``eval_epoch``, ``image_auroc``, and ``pixel_auroc`` arrays that
             stay empty unless per-epoch scoring is enabled.
     """
-    # Local import breaks a cycle: evaluate imports resolve_device from this module.
-    from src import evaluate
-
     _set_seed(config.SEED)
     device = resolve_device()
 

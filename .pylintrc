@@ -1,0 +1,8 @@
+[MESSAGES CONTROL]
+# Result files repeat a small run-configuration header on purpose, so each
+# JSON is interpretable on its own.
+disable = duplicate-code
+
+[DESIGN]
+# Pipeline functions (train/score/plot) legitimately carry a few extra locals.
+max-locals = 20

@@ -53,9 +53,8 @@ industrial-defect-detection/
 └── results/      # generated outputs (gitignored)
 ```
 
-Everything runs locally in VS Code, with training and inference on a local NVIDIA GPU.
-Run the pipeline from `main.py` (F5, or `python main.py`); all parameters live in
-`config.py`. See [CLAUDE.md](CLAUDE.md) for the full workflow.
+Everything runs locally, with training and inference on an NVIDIA GPU. Run the
+pipeline with `python main.py`; all parameters live in `config.py`.
 
 ## Roadmap
 

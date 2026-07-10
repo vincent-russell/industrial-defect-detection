@@ -1,24 +1,19 @@
 """VisA dataset: download, official split, sample loading, and a torch dataset.
 
 VisA (Zou et al., ECCV 2022) is a visual anomaly benchmark of 12 object
-categories. Each category has *normal* and *anomaly* images, plus pixel-level
-masks for the anomalies — exactly what we need for segmentation.
-
-Source (verified 2026-06): the tarball lives on Amazon's public S3 bucket and
-the canonical train/test split lives in the spot-diff GitHub repo as
-`split_csv/1cls.csv`. Using that official split keeps our results comparable to
-the literature instead of inventing our own.
+categories with normal and anomalous images, plus pixel-level defect masks for
+the anomalies. The official one-class train/test split (`1cls.csv`) is used so
+results stay comparable to the literature.
 
 On-disk layout after extraction (paths in the split CSV are relative to the
-dataset root, i.e. the directory that holds the category folders):
+dataset root, i.e. the directory holding the category folders):
 
     <root>/<category>/Data/Images/Normal/*.JPG
     <root>/<category>/Data/Images/Anomaly/*.JPG
     <root>/<category>/Data/Masks/Anomaly/*.png      # masks only for anomalies
 
-Pure Python, all local: the ~16 GB tarball downloads and extracts under `data/`
-(gitignored) on first use. Download and extraction are idempotent, so reruns
-are cheap.
+The ~16 GB tarball downloads and extracts under `data/` on first use; download
+and extraction are idempotent.
 """
 
 from __future__ import annotations
@@ -41,10 +36,10 @@ import config
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
-# --- Sources (verified live 2026-06) ------------------------------------------
+# --- Sources -------------------------------------------------------------------
 
 VISA_TAR_URL = "https://amazon-visual-anomaly.s3.us-west-2.amazonaws.com/VisA_20220922.tar"
-# Official 1-class train/test split shipped in the spot-diff repo (not in the tar).
+# Official 1-class train/test split from the spot-diff repo (not in the tar).
 SPLIT_CSV_URL = "https://raw.githubusercontent.com/amazon-science/spot-diff/main/split_csv/1cls.csv"
 
 # The 12 object categories, in the dataset's own order.
@@ -53,7 +48,7 @@ CATEGORIES = (
     "macaroni2", "pcb1", "pcb2", "pcb3", "pcb4", "pipe_fryum",
 )
 
-# Where things land under the local data directory (all gitignored).
+# Local paths under the data directory.
 VISA_DIR = config.DATA_DIR / "VisA"          # extraction target
 VISA_TAR = config.DATA_DIR / "VisA_20220922.tar"
 SPLIT_CSV = config.DATA_DIR / "split_csv_1cls.csv"
@@ -61,7 +56,7 @@ SPLIT_CSV = config.DATA_DIR / "split_csv_1cls.csv"
 
 @dataclass(frozen=True)
 class VisaSample:
-    """One labelled VisA image, with absolute paths resolved on disk.
+    """One labelled VisA image with resolved on-disk paths.
 
     Attributes:
         category (str): Object category, e.g. "candle".
@@ -69,7 +64,7 @@ class VisaSample:
         label (str): Sample label, "normal" or "anomaly".
         image_path (Path): Absolute path to the RGB image on disk.
         mask_path (Path | None): Absolute path to the ground-truth mask, or None
-            for normal samples (which have no defect mask).
+            for normal samples.
     """
 
     category: str
@@ -93,43 +88,43 @@ class VisaSample:
 def _download(url: str, dest: Path) -> None:
     """Stream a URL to a local file with a progress bar.
 
-    Downloads to a temporary ``.part`` file and renames it into place only on
-    success, so an interrupted download never looks complete. Skips the work
-    entirely if `dest` already exists.
+    Downloads to a temporary ``.part`` file and renames it into place on
+    success, so an interrupted download never looks complete. Skips the
+    download if `dest` already exists.
 
     Args:
-        url (str): Source URL to download from.
-        dest (Path): Destination path to write the file to.
+        url (str): Source URL.
+        dest (Path): Destination file path.
     """
     if dest.exists():
         print(f"Already downloaded: {dest}")
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(dest.suffix + ".part")  # download to a temp name...
+    tmp = dest.with_suffix(dest.suffix + ".part")
     print(f"Downloading {url}\n        -> {dest}")
     with urllib.request.urlopen(url) as resp:  # noqa: S310 (trusted URL)
         total = int(resp.headers.get("Content-Length", 0))
         with open(tmp, "wb") as f, tqdm(
             total=total, unit="B", unit_scale=True, unit_divisor=1024
-        ) as bar:
+        ) as pbar:
             for chunk in iter(lambda: resp.read(1 << 20), b""):
                 f.write(chunk)
-                bar.update(len(chunk))
-    tmp.rename(dest)  # ...and rename only on success, so partials never look done.
+                pbar.update(len(chunk))
+    tmp.rename(dest)
 
 
 def _find_dataset_root(search_dir: Path) -> Path | None:
     """Locate the directory that holds the VisA category folders.
 
-    The tar's top-level folder name isn't something we want to hardcode, so we
-    search instead: a directory is the dataset root if it contains "candle".
+    A directory is the dataset root if it contains a "candle" folder; this
+    avoids hardcoding the tar's top-level folder name.
 
     Args:
         search_dir (Path): Directory to search, either the dataset root itself
             or its immediate parent.
 
     Returns:
-        Path | None: The dataset root, or None if no category folders were found.
+        Path | None: The dataset root, or None if not found.
     """
     if (search_dir / "candle").is_dir():
         return search_dir
@@ -142,12 +137,12 @@ def _find_dataset_root(search_dir: Path) -> Path | None:
 def download_visa(keep_tar: bool = False) -> Path:
     """Download and extract VisA, returning the dataset root.
 
-    Idempotent: skips the download if the tar is present and skips extraction if
-    the categories are already on disk.
+    Idempotent: skips the download if the tar is present and skips extraction
+    if the categories are already on disk.
 
     Args:
-        keep_tar (bool): If False (default), delete the ~16 GB archive after
-            extracting; if True, keep it on disk.
+        keep_tar (bool): If False (default), delete the archive after
+            extracting.
 
     Returns:
         Path: The dataset root, i.e. the directory holding the category folders.
@@ -187,21 +182,19 @@ def load_samples(
 ) -> list[VisaSample]:
     """Load VisA samples from the official 1-class split, optionally filtered.
 
-    Resolves every image and mask to an absolute path under the extracted
-    dataset. Downloads the small split CSV on first use; assumes the images
-    themselves are already extracted (call `download_visa` first).
+    Downloads the split CSV on first use; the images themselves must already
+    be extracted (call `download_visa` first).
 
     Args:
-        category (str | None): Restrict to this object category, or None for all.
-            Must be one of `CATEGORIES` if given.
+        category (str | None): Restrict to one of `CATEGORIES`, or None for all.
         split (str | None): Restrict to "train" or "test", or None for both.
         label (str | None): Restrict to "normal" or "anomaly", or None for both.
 
     Returns:
-        list[VisaSample]: The matching samples, each with paths resolved on disk.
+        list[VisaSample]: The matching samples with resolved on-disk paths.
 
     Raises:
-        ValueError: If `category` is given but not a known VisA category.
+        ValueError: If `category` is not a known VisA category.
         FileNotFoundError: If the extracted VisA images cannot be found.
     """
     if category is not None and category not in CATEGORIES:
@@ -243,10 +236,10 @@ def load_image(sample: VisaSample) -> np.ndarray:
     """Load a sample's image as an RGB array.
 
     Args:
-        sample (VisaSample): The sample whose image should be loaded.
+        sample (VisaSample): The sample to load.
 
     Returns:
-        np.ndarray: The image as a uint8 array of shape (H, W, 3).
+        np.ndarray: uint8 array of shape (H, W, 3).
     """
     with Image.open(sample.image_path) as im:
         return np.asarray(im.convert("RGB"))
@@ -255,15 +248,12 @@ def load_image(sample: VisaSample) -> np.ndarray:
 def load_mask(sample: VisaSample) -> np.ndarray | None:
     """Load a sample's ground-truth defect mask as a boolean array.
 
-    VisA masks store non-zero pixels where the defect is, so we threshold at
-    ``> 0`` to get a clean boolean mask.
-
     Args:
-        sample (VisaSample): The sample whose mask should be loaded.
+        sample (VisaSample): The sample to load.
 
     Returns:
-        np.ndarray | None: A boolean array of shape (H, W) where True marks
-            defect pixels, or None for normal samples (which have no mask).
+        np.ndarray | None: Boolean array of shape (H, W) where True marks
+            defect pixels, or None for normal samples.
     """
     if sample.mask_path is None:
         return None
@@ -272,7 +262,7 @@ def load_mask(sample: VisaSample) -> np.ndarray | None:
 
 
 def resize_mask(mask: np.ndarray, size: int) -> np.ndarray:
-    """Nearest-neighbour resize a boolean mask to a square of side `size`.
+    """Nearest-neighbour resize a boolean mask to `size` x `size`.
 
     Args:
         mask (np.ndarray): Boolean mask of shape (H, W).
@@ -281,21 +271,23 @@ def resize_mask(mask: np.ndarray, size: int) -> np.ndarray:
     Returns:
         np.ndarray: Boolean mask of shape (size, size).
     """
-    resized = Image.fromarray(mask.astype(np.uint8)).resize((size, size), Image.NEAREST)
+    resized = Image.fromarray(mask.astype(np.uint8)).resize(
+        (size, size), Image.Resampling.NEAREST
+    )
     return np.asarray(resized) > 0
 
 
 # --- Torch dataset ------------------------------------------------------------
 
 def build_transform(img_size: int) -> transforms.Compose:
-    """Build the image transform: resize to a square, tensor, ImageNet-normalise.
+    """Build the image transform: resize, tensor, ImageNet-normalise.
 
     Args:
         img_size (int): Side length in pixels of the square model input.
 
     Returns:
-        transforms.Compose: Callable mapping an (H, W, 3) uint8 RGB array to a
-            normalised float tensor of shape (3, img_size, img_size).
+        transforms.Compose: Maps an (H, W, 3) uint8 RGB array to a normalised
+            float tensor of shape (3, img_size, img_size).
     """
     return transforms.Compose(
         [
@@ -319,8 +311,7 @@ class VisaDataset(Dataset):
         """Wrap a list of samples with an image transform.
 
         Args:
-            samples (list[VisaSample]): Samples to serve, typically the normal
-                training images for one category.
+            samples (list[VisaSample]): Samples to serve.
             transform (transforms.Compose): Transform from `build_transform`.
         """
         self.samples = samples

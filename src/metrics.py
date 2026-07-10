@@ -1,8 +1,7 @@
-"""Segmentation and detection metrics, computed in numpy.
+"""Detection and segmentation metrics, computed in numpy.
 
-Small, dependency-free implementations of the two numbers we report for STFPM:
-threshold-free ROC AUC (for both image- and pixel-level scoring) and the best
-achievable IoU over a threshold sweep (a simple summary of mask quality).
+ROC AUC (image- and pixel-level scoring) and the best achievable IoU over a
+threshold sweep.
 """
 
 from __future__ import annotations

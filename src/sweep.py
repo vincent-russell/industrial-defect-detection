@@ -1,16 +1,10 @@
 """Sweep the STFPM pipeline over every VisA category and aggregate the results.
 
-Published VisA numbers are the *mean over all 12 categories*, not a single one,
-so a leaderboard-comparable result needs a model trained and scored per category
-and then averaged. This module drives that loop: for each category it trains the
-student (unless weights already exist), evaluates on the test split, and finally
-writes one summary file with the per-category rows and their category-mean
-image/pixel AUROC and IoU — the numbers you actually quote against the
-leaderboard.
-
-The per-category logic is unchanged: this only sets `config.CATEGORY` (and the
-derived weights path) for each iteration and calls the existing `train`,
-`evaluate`, and `visualize` code.
+Published VisA numbers are the mean over all 12 categories, so one model is
+trained and scored per category and the metrics are averaged. Each iteration
+sets `config.CATEGORY` (and the derived weights path) and calls the existing
+per-category `train`, `evaluate`, and `visualize` code; a summary file collects
+the per-category rows and their category means.
 """
 
 from __future__ import annotations
@@ -21,20 +15,19 @@ from pathlib import Path
 import config
 from src import data, evaluate, train, visualize
 
-# Metrics carried from each category's evaluation into the summary, in order.
+# Metrics carried from each category's evaluation into the summary.
 _METRIC_KEYS = ("image_auroc", "pixel_auroc", "best_iou", "iou_threshold")
-# Metrics averaged across categories for the leaderboard-style headline numbers.
+# Metrics averaged across categories.
 _MEAN_KEYS = ("image_auroc", "pixel_auroc", "best_iou")
 
 
 def _select_category(category: str) -> None:
     """Point the shared config at one category for the next train/eval calls.
 
-    Mutates the module-level `config` so the existing per-category functions —
-    which read `config.CATEGORY` and `config.STUDENT_WEIGHTS` at call time — act
-    on `category`. The weights path is re-derived from the current
-    `config.MODELS_DIR` and `config.BACKBONE`, so redirecting `MODELS_DIR` (e.g.
-    for a smoke test) is respected.
+    Mutates the module-level `config` so functions that read `config.CATEGORY`
+    and `config.STUDENT_WEIGHTS` at call time act on `category`. The weights
+    path is re-derived from the current `config.MODELS_DIR` and
+    `config.BACKBONE`.
 
     Args:
         category (str): VisA category to switch to; must be in `data.CATEGORIES`.
@@ -48,9 +41,8 @@ def _select_category(category: str) -> None:
 def run_category(category: str, figures: bool = True) -> dict[str, float]:
     """Train (if needed) and evaluate one category, returning its metrics.
 
-    Trains the student on the category's normal images only when no weights are
-    saved yet (also saving the training curves), then always evaluates on the
-    test split and optionally renders the qualitative example panel.
+    Trains the student only when no saved weights exist (also saving the
+    training curves), then evaluates on the test split.
 
     Args:
         category (str): VisA category to run; must be in `data.CATEGORIES`.
@@ -79,17 +71,16 @@ def _save_summary(rows: list[dict], path: Path | None = None) -> Path:
     """Write the per-category rows and their category means to one JSON file.
 
     The payload records the run configuration, one row per category, and the
-    ``mean`` over categories of image/pixel AUROC and best IoU — the
-    leaderboard-comparable headline numbers.
+    ``mean`` over categories of image/pixel AUROC and best IoU.
 
     Args:
-        rows (list[dict]): Per-category results as built by `sweep`, each with a
-            ``category`` key plus the metric keys.
-        path (Path | None): Destination file, or None to derive a default name of
+        rows (list[dict]): Per-category results as built by `sweep`, each with
+            a ``category`` key plus the metric keys.
+        path (Path | None): Destination file, or None for the default
             ``summary_<backbone>.json`` under `config.RESULTS_DIR`.
 
     Returns:
-        Path: The path the summary was written to.
+        Path: The path written to.
     """
     if path is None:
         path = config.RESULTS_DIR / f"summary_{config.BACKBONE}.json"
@@ -112,11 +103,11 @@ def _save_summary(rows: list[dict], path: Path | None = None) -> Path:
 
 
 def _print_table(rows: list[dict], mean: dict[str, float]) -> None:
-    """Print a leaderboard-style table of per-category metrics and their mean.
+    """Print a table of per-category metrics and their mean.
 
     Args:
-        rows (list[dict]): Per-category results, each with a ``category`` key plus
-            the metric keys.
+        rows (list[dict]): Per-category results, each with a ``category`` key
+            plus the metric keys.
         mean (dict[str, float]): Category means keyed by `_MEAN_KEYS`.
     """
     print(f"\n{'category':<12}{'image AUROC':>14}{'pixel AUROC':>14}{'best IoU':>12}")
@@ -138,10 +129,8 @@ def sweep(
 ) -> dict:
     """Run every category end to end and aggregate the category-mean metrics.
 
-    For each category, trains (if needed) and evaluates the student, collects its
-    metrics, then writes a single summary file and prints a leaderboard-style
-    table. The category means of image/pixel AUROC are the numbers to compare
-    against the published VisA leaderboard.
+    Trains (if needed) and evaluates each category, then writes a single
+    summary file and prints a table of the results.
 
     Args:
         categories (tuple[str, ...]): Categories to sweep, defaulting to all 12.

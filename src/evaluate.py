@@ -1,15 +1,15 @@
 """Evaluate a trained STFPM student on a category's test split.
 
-Runs the student over every test image, turns the teacher/student discrepancy
-into a per-pixel anomaly map, and reports three numbers: image-level ROC AUC
-(is the image anomalous?), pixel-level ROC AUC (which pixels?), and the best
-achievable IoU. Ground-truth masks are used for scoring only — never training.
+Scores every test image with the anomaly map and reports image-level ROC AUC,
+pixel-level ROC AUC, and the best achievable IoU. Ground-truth masks are used
+for scoring only, never training.
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import torch
@@ -19,8 +19,7 @@ from tqdm import tqdm
 import config
 from src import data, metrics
 from src.data import build_transform
-from src.model import STFPM, anomaly_map
-from src.train import resolve_device
+from src.model import STFPM, anomaly_map, resolve_device
 
 
 def load_model(device: torch.device) -> STFPM:
@@ -60,28 +59,28 @@ def predict(model: STFPM, image: np.ndarray, device: torch.device) -> np.ndarray
             anomalous.
     """
     transform = build_transform(config.IMG_SIZE)
-    tensor = transform(np.ascontiguousarray(image)).unsqueeze(0).to(device)
+    tensor = cast(torch.Tensor, transform(np.ascontiguousarray(image)))
+    tensor = tensor.unsqueeze(0).to(device)
     teacher_feats, student_feats = model(tensor)
     amap = anomaly_map(teacher_feats, student_feats, (config.IMG_SIZE, config.IMG_SIZE))
     if config.SMOOTH_SIGMA > 0:
         kernel = 2 * int(round(3 * config.SMOOTH_SIGMA)) + 1  # cover +/-3 sigma
-        amap = gaussian_blur(amap, kernel_size=kernel, sigma=config.SMOOTH_SIGMA)
+        amap = gaussian_blur(
+            amap, kernel_size=[kernel, kernel], sigma=[config.SMOOTH_SIGMA]
+        )
     return amap.squeeze().cpu().numpy()
 
 
 def _save_metrics(results: dict[str, float], path: Path | None = None) -> Path:
-    """Write evaluation metrics to a self-describing JSON file under `results/`.
-
-    Records the run configuration alongside the metric values, so the file is
-    interpretable on its own without consulting `config`.
+    """Write evaluation metrics, with their run configuration, to JSON.
 
     Args:
         results (dict[str, float]): Metrics as returned by `evaluate`.
-        path (Path | None): Destination file, or None to derive a default name
-            of ``metrics_<backbone>_<category>.json`` under `config.RESULTS_DIR`.
+        path (Path | None): Destination file, or None for the default
+            ``metrics_<backbone>_<category>.json`` under `config.RESULTS_DIR`.
 
     Returns:
-        Path: The path the metrics were written to.
+        Path: The path written to.
     """
     if path is None:
         path = config.RESULTS_DIR / f"metrics_{config.BACKBONE}_{config.CATEGORY}.json"
@@ -106,16 +105,15 @@ def score(
     device: torch.device,
     progress: bool = False,
 ) -> dict[str, float]:
-    """Score a model over samples and return metrics, doing no I/O.
+    """Score a model over samples and return metrics, writing no files.
 
-    The pure scoring core shared by `evaluate` (full run, saves a file) and by
-    per-epoch monitoring during training. Switches the model to eval mode and
-    restores its previous mode afterwards, so it is safe to call mid-training.
-    Pixel metrics are computed at `config.IMG_SIZE` — the resolution the model
-    predicts at — for both the anomaly map and the ground-truth mask.
+    Shared by `evaluate` and by per-epoch monitoring during training: the model
+    is switched to eval mode and restored afterwards, so it is safe to call
+    mid-training. Pixel metrics are computed at `config.IMG_SIZE` resolution
+    for both the anomaly map and the ground-truth mask.
 
     Args:
-        model (STFPM): The model to score (trained or mid-training).
+        model (STFPM): The model to score.
         samples (list[data.VisaSample]): The test samples to score over.
         device (torch.device): Device the model lives on.
         progress (bool): If True, show a per-image progress bar.

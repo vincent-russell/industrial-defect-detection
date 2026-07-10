@@ -1,12 +1,8 @@
-"""Render qualitative STFPM examples from the test set.
+"""Render result figures: training curves and qualitative test examples.
 
-For a handful of test images this draws a side-by-side panel — the input image,
-the ground-truth defect, and the model's predicted anomaly heatmap — and writes
-it to `results/` as a single PNG. These are the qualitative figures for the
-README; nothing here feeds back into scoring.
-
-The model is reloaded and re-run on just the chosen examples (a few images), so
-this is cheap to call on its own after training, independent of `evaluate`.
+The example panel shows, for a handful of test images, the input, the
+ground-truth defect mask, and the predicted anomaly heatmap side by side.
+Nothing here feeds back into scoring.
 """
 
 from __future__ import annotations
@@ -15,20 +11,20 @@ import json
 from pathlib import Path
 
 import matplotlib
-
-matplotlib.use("Agg")  # non-interactive backend: render straight to a file
-import matplotlib.pyplot as plt  # noqa: E402 (must follow backend selection)
+import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
 import config
 from src import data
 from src.evaluate import load_model, predict
-from src.train import resolve_device
+from src.model import resolve_device
+
+matplotlib.use("Agg")  # non-interactive backend: render straight to files
 
 
 def _resize_rgb(image: np.ndarray, size: int) -> np.ndarray:
-    """Bilinear-resize an RGB image to a square of side `size`.
+    """Bilinear-resize an RGB image to `size` x `size`.
 
     Args:
         image (np.ndarray): RGB image of shape (H, W, 3), uint8.
@@ -37,7 +33,9 @@ def _resize_rgb(image: np.ndarray, size: int) -> np.ndarray:
     Returns:
         np.ndarray: Resized RGB image of shape (size, size, 3), uint8.
     """
-    return np.asarray(Image.fromarray(image).resize((size, size), Image.BILINEAR))
+    return np.asarray(
+        Image.fromarray(image).resize((size, size), Image.Resampling.BILINEAR)
+    )
 
 
 def _normalize(amap: np.ndarray) -> np.ndarray:
@@ -56,26 +54,25 @@ def _normalize(amap: np.ndarray) -> np.ndarray:
 def save_training_curves(
     history: dict[str, list[float]] | None = None, path: Path | None = None
 ) -> Path:
-    """Plot the training history — loss and (if tracked) test AUROC — per epoch.
+    """Plot the training history: loss and (if tracked) test AUROC per epoch.
 
-    Draws the mean distillation loss against epoch on the left axis and, when the
-    per-epoch diagnostic was enabled during training, the image- and pixel-level
-    test AUROC on a shared right axis. The AUROC curves are a convergence
-    diagnostic measured on the test split (monitoring only), noted as such on the
-    figure. Writes a single PNG under `results/`.
+    Draws the mean distillation loss on the left axis and, when per-epoch
+    scoring was enabled during training, the image- and pixel-level test AUROC
+    on a shared right axis (a monitoring diagnostic, noted as such on the
+    figure).
 
     Args:
-        history (dict[str, list[float]] | None): Per-epoch arrays as returned by
-            `train`, or None to load the saved
+        history (dict[str, list[float]] | None): Per-epoch arrays as returned
+            by `train`, or None to load the saved
             ``history_<backbone>_<category>.json`` from `config.RESULTS_DIR`.
-        path (Path | None): Destination PNG, or None to derive a default name of
+        path (Path | None): Destination PNG, or None for the default
             ``training_<backbone>_<category>.png`` under `config.RESULTS_DIR`.
 
     Returns:
         Path: The path the figure was written to.
 
     Raises:
-        FileNotFoundError: If `history` is None and no saved history file exists.
+        FileNotFoundError: If `history` is None and no saved history exists.
     """
     if path is None:
         path = config.RESULTS_DIR / f"training_{config.BACKBONE}_{config.CATEGORY}.png"
@@ -86,7 +83,8 @@ def save_training_curves(
                 f"No training history at {hist_path}. Train the model first."
             )
         with open(hist_path, encoding="utf-8") as f:
-            history = json.load(f)
+            loaded: dict[str, list[float]] = json.load(f)
+        history = loaded
 
     fig, ax_loss = plt.subplots(figsize=(8, 5))
     ax_loss.plot(history["epoch"], history["loss"], color="tab:blue", label="train loss")
@@ -131,9 +129,8 @@ def _select_examples(
 ) -> list[data.VisaSample]:
     """Pick a representative set of test samples to visualise.
 
-    Chooses anomalous samples that carry a ground-truth mask, spread evenly
-    across the test split, and appends one normal sample for contrast (so the
-    panel also shows the heatmap staying cold on a defect-free image).
+    Chooses anomalous samples with a ground-truth mask, spread evenly across
+    the test split, plus one normal sample for contrast.
 
     Args:
         samples (list[data.VisaSample]): The category's full test split.
@@ -158,12 +155,12 @@ def _select_examples(
 def save_examples(path: Path | None = None) -> Path:
     """Render and save a qualitative panel of test-set predictions.
 
-    Builds a grid with one row per example and three columns — input, ground
-    truth (defect mask overlaid in red), and the predicted anomaly heatmap
-    (overlaid in `inferno`) — then writes it to a PNG under `results/`.
+    Builds a grid with one row per example and three columns: the input, the
+    ground-truth defect mask overlaid in red, and the predicted anomaly
+    heatmap.
 
     Args:
-        path (Path | None): Destination PNG, or None to derive a default name of
+        path (Path | None): Destination PNG, or None for the default
             ``examples_<backbone>_<category>.png`` under `config.RESULTS_DIR`.
 
     Returns:

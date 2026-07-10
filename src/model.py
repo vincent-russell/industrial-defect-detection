@@ -1,14 +1,10 @@
 """STFPM model: a frozen teacher, a trainable student, and their discrepancy.
 
-Student-Teacher Feature-Pyramid Matching (Wang et al., BMVC 2021). A pretrained
-ImageNet backbone (the *teacher*) is frozen; a second backbone of the same
-architecture (the *student*) is trained from scratch to reproduce the teacher's
-feature maps on *normal* images. At test time, wherever the student fails to
-match the teacher — measured across several feature-pyramid levels — is flagged
-as anomalous.
-
-This module holds the network and two pure functions: `distillation_loss` (the
-training objective) and `anomaly_map` (the per-pixel score used at inference).
+Student-Teacher Feature-Pyramid Matching (Wang et al., BMVC 2021): a pretrained
+ImageNet backbone (the teacher) is frozen, and a same-architecture student is
+trained to reproduce the teacher's feature maps on normal images. At test time,
+regions where the student fails to match the teacher across the feature pyramid
+are flagged as anomalous.
 """
 
 from __future__ import annotations
@@ -17,6 +13,8 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 from torchvision import models
+
+import config
 
 # Backbone constructors paired with their default ImageNet weights.
 _BACKBONES = {
@@ -32,12 +30,23 @@ _BACKBONES = {
 _STAGES = ("layer1", "layer2", "layer3", "layer4")
 
 
+def resolve_device() -> torch.device:
+    """Return the configured device, falling back to CPU if CUDA is unavailable.
+
+    Returns:
+        torch.device: The device to run on.
+    """
+    if config.DEVICE == "cuda" and not torch.cuda.is_available():
+        print("CUDA requested but not available; falling back to CPU.")
+        return torch.device("cpu")
+    return torch.device(config.DEVICE)
+
+
 class FeatureExtractor(nn.Module):
     """A ResNet backbone that returns feature maps at selected pyramid stages.
 
-    Runs the stem and residual stages in order and collects the outputs of the
-    requested stages, stopping once the deepest requested stage is reached so no
-    unused layers are computed.
+    Runs the stem and residual stages in order, collecting the outputs of the
+    requested stages and stopping after the deepest one.
 
     Attributes:
         layers (tuple[str, ...]): Stage names whose outputs are returned, e.g.
@@ -50,8 +59,8 @@ class FeatureExtractor(nn.Module):
         Args:
             backbone (str): Backbone key, one of `_BACKBONES`.
             layers (tuple[str, ...]): Stage names to tap, a subset of `_STAGES`.
-            pretrained (bool): If True, load ImageNet weights (the teacher); if
-                False, randomly initialise (the student).
+            pretrained (bool): If True, load ImageNet weights; if False,
+                randomly initialise.
 
         Raises:
             KeyError: If `backbone` is not a known backbone.
@@ -88,9 +97,9 @@ class STFPM(nn.Module):
     """A frozen teacher paired with a trainable student for feature matching.
 
     Attributes:
-        teacher (FeatureExtractor): Frozen, pretrained backbone; never trained.
-        student (FeatureExtractor): Randomly initialised backbone; the only part
-            with gradients.
+        teacher (FeatureExtractor): Frozen pretrained backbone.
+        student (FeatureExtractor): Randomly initialised backbone; the only
+            part with gradients.
     """
 
     def __init__(self, backbone: str, layers: tuple[str, ...]):
@@ -141,8 +150,8 @@ def distillation_loss(
 ) -> torch.Tensor:
     """Compute the student-teacher feature-matching loss, summed over stages.
 
-    Each feature map is L2-normalised along the channel dimension so the match
-    is directional (magnitude-invariant), then compared with mean squared error.
+    Each feature map is L2-normalised along the channel dimension, then
+    compared with mean squared error.
 
     Args:
         teacher_feats (list[torch.Tensor]): Teacher feature maps, one per stage.
@@ -150,7 +159,7 @@ def distillation_loss(
             stage with `teacher_feats`.
 
     Returns:
-        torch.Tensor: Scalar loss (sum of per-stage MSE on normalised features).
+        torch.Tensor: Scalar loss.
     """
     loss = teacher_feats[0].new_zeros(())
     for teacher, student in zip(teacher_feats, student_feats):
@@ -167,10 +176,9 @@ def anomaly_map(
 ) -> torch.Tensor:
     """Build a per-pixel anomaly map by fusing per-stage discrepancies.
 
-    For each stage, the squared L2 distance between the channel-normalised
-    teacher and student features gives a coarse discrepancy map; each is
-    upsampled to `out_size` and the stages are multiplied together, so a pixel
-    scores high only where several scales agree it is anomalous.
+    For each stage, the squared L2 distance between channel-normalised teacher
+    and student features is upsampled to `out_size`; the stages are then
+    multiplied together.
 
     Args:
         teacher_feats (list[torch.Tensor]): Teacher feature maps, one per stage.
