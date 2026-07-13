@@ -5,8 +5,6 @@ feature maps on defect-free images; no anomalous images are seen during
 training.
 """
 
-from __future__ import annotations
-
 import json
 import random
 from pathlib import Path

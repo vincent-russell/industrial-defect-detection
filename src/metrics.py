@@ -4,8 +4,6 @@ ROC AUC (image- and pixel-level scoring) and the best achievable IoU over a
 threshold sweep.
 """
 
-from __future__ import annotations
-
 import numpy as np
 
 

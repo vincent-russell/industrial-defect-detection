@@ -16,8 +16,6 @@ The ~16 GB tarball downloads and extracts under `data/` on first use; download
 and extraction are idempotent.
 """
 
-from __future__ import annotations
-
 import csv
 import tarfile
 import urllib.request

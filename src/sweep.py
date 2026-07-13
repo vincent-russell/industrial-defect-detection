@@ -7,8 +7,6 @@ per-category `train`, `evaluate`, and `visualize` code; a summary file collects
 the per-category rows and their category means.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 

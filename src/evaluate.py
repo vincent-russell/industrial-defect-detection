@@ -5,8 +5,6 @@ pixel-level ROC AUC, and the best achievable IoU. Ground-truth masks are used
 for scoring only, never training.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 from typing import cast

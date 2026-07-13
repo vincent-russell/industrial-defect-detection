@@ -3,8 +3,6 @@
 Run with `python main.py`. Logic lives in `src/`; parameters in `config.py`.
 """
 
-from __future__ import annotations
-
 import config
 from src import data, sweep
 

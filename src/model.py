@@ -7,8 +7,6 @@ regions where the student fails to match the teacher across the feature pyramid
 are flagged as anomalous.
 """
 
-from __future__ import annotations
-
 import torch
 import torch.nn.functional as F
 from torch import nn

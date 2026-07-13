@@ -5,8 +5,6 @@ ground-truth defect mask, and the predicted anomaly heatmap side by side.
 Nothing here feeds back into scoring.
 """
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 
