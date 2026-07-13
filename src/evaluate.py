@@ -19,6 +19,10 @@ from src import data, metrics
 from src.data import build_transform
 from src.model import STFPM, anomaly_map, resolve_device
 
+# Metrics that are meaningful to average across categories (the IoU threshold
+# is category-specific, so it is reported per category but never averaged).
+_MEAN_KEYS = ("image_auroc", "pixel_auroc", "best_iou")
+
 
 def load_model(device: torch.device) -> STFPM:
     """Build an STFPM model and load the saved student weights.
@@ -93,6 +97,63 @@ def _save_metrics(results: dict[str, float], path: Path | None = None) -> Path:
     with open(path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
     return path
+
+
+def save_summary(rows: list[dict], path: Path | None = None) -> dict:
+    """Write per-category rows and their category means to one JSON file.
+
+    The payload records the run configuration, one row per category, and the
+    ``mean`` over categories of image/pixel AUROC and best IoU.
+
+    Args:
+        rows: Per-category results, each with a ``category`` key plus the
+            metric keys returned by `score`.
+        path: Destination file, or None for the default
+            ``summary_<backbone>.json`` under `config.RESULTS_DIR`.
+
+    Returns:
+        The summary payload as written.
+    """
+    if path is None:
+        path = config.RESULTS_DIR / f"summary_{config.BACKBONE}.json"
+    mean = {
+        key: sum(row[key] for row in rows) / len(rows) for key in _MEAN_KEYS
+    }
+    payload = {
+        "backbone": config.BACKBONE,
+        "feature_layers": list(config.FEATURE_LAYERS),
+        "img_size": config.IMG_SIZE,
+        "epochs": config.EPOCHS,
+        "num_categories": len(rows),
+        "categories": rows,
+        "mean": mean,
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+    print(f"Saved summary -> {path}")
+    return payload
+
+
+def print_summary(summary: dict) -> None:
+    """Print a table of per-category metrics and their category mean.
+
+    Args:
+        summary: Summary payload as built by `save_summary`.
+    """
+    mean = summary["mean"]
+    print(f"\n{'category':<12}{'image AUROC':>14}{'pixel AUROC':>14}{'best IoU':>12}")
+    print("-" * 52)
+    for row in summary["categories"]:
+        print(
+            f"{row['category']:<12}{row['image_auroc']:>14.4f}"
+            f"{row['pixel_auroc']:>14.4f}{row['best_iou']:>12.4f}"
+        )
+    print("-" * 52)
+    print(
+        f"{'MEAN':<12}{mean['image_auroc']:>14.4f}"
+        f"{mean['pixel_auroc']:>14.4f}{mean['best_iou']:>12.4f}"
+    )
 
 
 @torch.no_grad()

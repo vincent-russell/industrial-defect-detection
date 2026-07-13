@@ -6,8 +6,9 @@ from pathlib import Path
 # Run parameters
 # =============================================================================
 
-# One VisA object category (see CATEGORIES in src/data.py), or "all" to sweep
-# every category and report the category mean.
+# One VisA object category, or "all" to sweep every category and report the
+# category mean. Categories: candle, capsules, cashew, chewinggum, fryum,
+# macaroni1, macaroni2, pcb1, pcb2, pcb3, pcb4, pipe_fryum.
 CATEGORY = "cashew"
 
 # Model
