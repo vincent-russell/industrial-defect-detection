@@ -51,7 +51,7 @@ results/      generated outputs (gitignored)
 3. [x] VisA download + loader (verify the live source URL before hardcoding; dataset ~16 GB)
 4. [x] STFPM model + training on normal images (local GPU)
 5. [x] Evaluation (image/pixel ROC AUC, IoU)
-6. [ ] Result figures and qualitative examples
+6. [x] Result figures and qualitative examples
 
 ## Dataset
 VisA (Zou et al., ECCV 2022) — https://github.com/amazon-science/spot-diff

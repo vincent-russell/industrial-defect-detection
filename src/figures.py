@@ -122,6 +122,74 @@ def save_training_curves(
     return path
 
 
+def save_summary_figure(summary: dict | None = None, path: Path | None = None) -> Path:
+    """Plot per-category image- and pixel-level AUROC from a sweep summary.
+
+    Draws a dumbbell chart with one row per category (sorted by image AUROC)
+    and a dot per metric, plus dashed lines marking the category means.
+
+    Args:
+        summary: Sweep summary as returned by `evaluate.save_summary`, or None
+            to load the saved ``summary_<backbone>.json`` from
+            `config.RESULTS_DIR`.
+        path: Destination PNG, or None for the default
+            ``summary_<backbone>.png`` under `config.RESULTS_DIR`.
+
+    Returns:
+        The path the figure was written to.
+
+    Raises:
+        FileNotFoundError: If `summary` is None and no saved summary exists.
+    """
+    if path is None:
+        path = config.RESULTS_DIR / f"summary_{config.BACKBONE}.png"
+    if summary is None:
+        summary_path = config.RESULTS_DIR / f"summary_{config.BACKBONE}.json"
+        if not summary_path.exists():
+            raise FileNotFoundError(
+                f"No sweep summary at {summary_path}. Run the full sweep first."
+            )
+        with open(summary_path, encoding="utf-8") as f:
+            loaded: dict = json.load(f)
+        summary = loaded
+
+    rows = sorted(summary["categories"], key=lambda r: r["image_auroc"])
+    names = [r["category"] for r in rows]
+    image = np.array([r["image_auroc"] for r in rows])
+    pixel = np.array([r["pixel_auroc"] for r in rows])
+    y = np.arange(len(rows))
+    blue, aqua, ink, muted, grid = "#2a78d6", "#1baf7a", "#0b0b0b", "#898781", "#e1e0d9"
+
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+    ax.hlines(y, image, pixel, color=grid, lw=2, zorder=1)
+    ax.scatter(image, y, s=64, color=blue, zorder=2, label="image AUROC")
+    ax.scatter(pixel, y, s=64, color=aqua, zorder=2, label="pixel AUROC")
+    for value, color in ((image.mean(), blue), (pixel.mean(), aqua)):
+        ax.axvline(value, color=color, lw=1, ls="--", alpha=0.6, zorder=1)
+        ax.text(value, len(rows) - 0.2, f"mean {value:.3f}", color=color,
+                fontsize=9, ha="center", va="bottom")
+
+    ax.set_yticks(y, names)
+    ax.set_xlim(0.5, 1.0)
+    ax.set_ylim(-0.6, len(rows) + 0.4)
+    ax.set_xlabel("test AUROC", color=muted)
+    ax.tick_params(colors=muted, length=0)
+    ax.grid(True, axis="x", color=grid, lw=0.8)
+    ax.set_axisbelow(True)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    ax.legend(loc="lower left", fontsize=9, frameon=False)
+    ax.set_title(
+        f"STFPM ({summary['backbone']}) on VisA — AUROC by category",
+        fontsize=13, color=ink,
+    )
+    fig.tight_layout()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    return path
+
+
 def _select_examples(
     samples: list[data.VisaSample], count: int
 ) -> list[data.VisaSample]:

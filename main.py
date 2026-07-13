@@ -79,6 +79,8 @@ def sweep(
     ]
     summary = evaluate.save_summary(rows)
     evaluate.print_summary(summary)
+    if make_figures:
+        figures.save_summary_figure(summary)
     return summary
 
 
