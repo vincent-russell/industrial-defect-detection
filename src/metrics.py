@@ -11,10 +11,10 @@ def _average_ranks(values_sorted: np.ndarray) -> np.ndarray:
     """Return average (tie-aware) ranks for an already-sorted array.
 
     Args:
-        values_sorted (np.ndarray): 1-D array sorted in ascending order.
+        values_sorted: 1-D array sorted in ascending order.
 
     Returns:
-        np.ndarray: 1-based ranks, with ties assigned their group's mean rank.
+        1-based ranks, with ties assigned their group's mean rank.
     """
     _, inverse, counts = np.unique(
         values_sorted, return_inverse=True, return_counts=True
@@ -29,11 +29,11 @@ def roc_auc(labels: np.ndarray, scores: np.ndarray) -> float:
     """Compute ROC AUC via the Mann-Whitney rank-sum identity.
 
     Args:
-        labels (np.ndarray): Binary labels (True/1 for the positive class).
-        scores (np.ndarray): Real-valued scores; higher should mean positive.
+        labels: Binary labels (True/1 for the positive class).
+        scores: Real-valued scores; higher should mean positive.
 
     Returns:
-        float: Area under the ROC curve, or NaN if only one class is present.
+        Area under the ROC curve, or NaN if only one class is present.
     """
     labels = np.asarray(labels).astype(bool).ravel()
     scores = np.asarray(scores, dtype=np.float64).ravel()
@@ -53,13 +53,13 @@ def best_iou(
     """Sweep thresholds and return the best IoU and the threshold that hit it.
 
     Args:
-        labels (np.ndarray): Binary ground-truth mask, flattened over all pixels.
-        scores (np.ndarray): Anomaly scores aligned with `labels`.
-        num_thresholds (int): Number of thresholds sampled across the score range.
+        labels: Binary ground-truth mask, flattened over all pixels.
+        scores: Anomaly scores aligned with `labels`.
+        num_thresholds: Number of thresholds sampled across the score range.
 
     Returns:
-        tuple[float, float]: The best IoU and its threshold. IoU is NaN if there
-            are no positive ground-truth pixels.
+        The best IoU and its threshold. IoU is NaN if there are no positive
+        ground-truth pixels.
     """
     labels = np.asarray(labels).astype(bool).ravel()
     scores = np.asarray(scores, dtype=np.float64).ravel()

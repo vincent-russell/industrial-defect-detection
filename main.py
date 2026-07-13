@@ -28,7 +28,7 @@ def _select_category(category: str) -> None:
     `config.BACKBONE`.
 
     Args:
-        category (str): VisA category to switch to; must be in `data.CATEGORIES`.
+        category: VisA category to switch to; must be in `data.CATEGORIES`.
     """
     config.CATEGORY = category
     config.STUDENT_WEIGHTS = (
@@ -43,12 +43,12 @@ def run_category(category: str, make_figures: bool = True) -> dict[str, float]:
     training curves), then evaluates on the test split.
 
     Args:
-        category (str): VisA category to run; must be in `data.CATEGORIES`.
-        make_figures (bool): If True, also render the qualitative example panel.
+        category: VisA category to run; must be in `data.CATEGORIES`.
+        make_figures: If True, also render the qualitative example panel.
 
     Returns:
-        dict[str, float]: Metrics with keys ``image_auroc``, ``pixel_auroc``,
-            ``best_iou``, and ``iou_threshold``.
+        Metrics with keys ``image_auroc``, ``pixel_auroc``, ``best_iou``,
+        and ``iou_threshold``.
     """
     _select_category(category)
     print(f"\n=== {category} ===")
@@ -72,13 +72,13 @@ def _save_summary(rows: list[dict], path: Path | None = None) -> Path:
     ``mean`` over categories of image/pixel AUROC and best IoU.
 
     Args:
-        rows (list[dict]): Per-category results as built by `sweep`, each with
-            a ``category`` key plus the metric keys.
-        path (Path | None): Destination file, or None for the default
+        rows: Per-category results as built by `sweep`, each with a
+            ``category`` key plus the metric keys.
+        path: Destination file, or None for the default
             ``summary_<backbone>.json`` under `config.RESULTS_DIR`.
 
     Returns:
-        Path: The path written to.
+        The path written to.
     """
     if path is None:
         path = config.RESULTS_DIR / f"summary_{config.BACKBONE}.json"
@@ -104,9 +104,9 @@ def _print_table(rows: list[dict], mean: dict[str, float]) -> None:
     """Print a table of per-category metrics and their mean.
 
     Args:
-        rows (list[dict]): Per-category results, each with a ``category`` key
-            plus the metric keys.
-        mean (dict[str, float]): Category means keyed by `_MEAN_KEYS`.
+        rows: Per-category results, each with a ``category`` key plus the
+            metric keys.
+        mean: Category means keyed by `_MEAN_KEYS`.
     """
     print(f"\n{'category':<12}{'image AUROC':>14}{'pixel AUROC':>14}{'best IoU':>12}")
     print("-" * 52)
@@ -131,12 +131,12 @@ def sweep(
     summary file and prints a table of the results.
 
     Args:
-        categories (tuple[str, ...]): Categories to sweep, defaulting to all 12.
-        make_figures (bool): If True, also render each category's example panel.
+        categories: Categories to sweep, defaulting to all 12.
+        make_figures: If True, also render each category's example panel.
 
     Returns:
-        dict: The summary payload as written by `_save_summary`, including the
-            per-category ``categories`` rows and the ``mean`` over categories.
+        The summary payload as written by `_save_summary`, including the
+        per-category ``categories`` rows and the ``mean`` over categories.
     """
     rows: list[dict] = []
     for category in categories:

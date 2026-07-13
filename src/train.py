@@ -24,7 +24,7 @@ def _set_seed(seed: int) -> None:
     """Seed Python, numpy, and torch RNGs for reproducible runs.
 
     Args:
-        seed (int): The seed value.
+        seed: The seed value.
     """
     random.seed(seed)
     np.random.seed(seed)
@@ -36,12 +36,12 @@ def _save_history(history: dict[str, list[float]], path: Path | None = None) -> 
     """Write the training history, with its run configuration, to JSON.
 
     Args:
-        history (dict[str, list[float]]): Per-epoch arrays as built by `train`.
-        path (Path | None): Destination file, or None for the default
+        history: Per-epoch arrays as built by `train`.
+        path: Destination file, or None for the default
             ``history_<backbone>_<category>.json`` under `config.RESULTS_DIR`.
 
     Returns:
-        Path: The path written to.
+        The path written to.
     """
     if path is None:
         path = config.RESULTS_DIR / f"history_{config.BACKBONE}_{config.CATEGORY}.json"
@@ -69,9 +69,9 @@ def train() -> dict[str, list[float]]:
     `config.STUDENT_WEIGHTS` and the history to `config.RESULTS_DIR`.
 
     Returns:
-        dict[str, list[float]]: History keyed by ``epoch`` and ``loss``, plus
-            ``eval_epoch``, ``image_auroc``, and ``pixel_auroc`` arrays that
-            stay empty unless per-epoch scoring is enabled.
+        History keyed by ``epoch`` and ``loss``, plus ``eval_epoch``,
+        ``image_auroc``, and ``pixel_auroc`` arrays that stay empty unless
+        per-epoch scoring is enabled.
     """
     _set_seed(config.SEED)
     device = resolve_device()

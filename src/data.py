@@ -21,8 +21,10 @@ import tarfile
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
 
 import numpy as np
+import torch
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
@@ -57,12 +59,12 @@ class VisaSample:
     """One labelled VisA image with resolved on-disk paths.
 
     Attributes:
-        category (str): Object category, e.g. "candle".
-        split (str): Dataset split, "train" or "test".
-        label (str): Sample label, "normal" or "anomaly".
-        image_path (Path): Absolute path to the RGB image on disk.
-        mask_path (Path | None): Absolute path to the ground-truth mask, or None
-            for normal samples.
+        category: Object category, e.g. "candle".
+        split: Dataset split, "train" or "test".
+        label: Sample label, "normal" or "anomaly".
+        image_path: Absolute path to the RGB image on disk.
+        mask_path: Absolute path to the ground-truth mask, or None for normal
+            samples.
     """
 
     category: str
@@ -76,7 +78,7 @@ class VisaSample:
         """Whether this sample is labelled as an anomaly.
 
         Returns:
-            bool: True if the label is "anomaly", False otherwise.
+            True if the label is "anomaly", False otherwise.
         """
         return self.label == "anomaly"
 
@@ -91,8 +93,8 @@ def _download(url: str, dest: Path) -> None:
     download if `dest` already exists.
 
     Args:
-        url (str): Source URL.
-        dest (Path): Destination file path.
+        url: Source URL.
+        dest: Destination file path.
     """
     if dest.exists():
         print(f"Already downloaded: {dest}")
@@ -118,11 +120,11 @@ def _find_dataset_root(search_dir: Path) -> Path | None:
     avoids hardcoding the tar's top-level folder name.
 
     Args:
-        search_dir (Path): Directory to search, either the dataset root itself
-            or its immediate parent.
+        search_dir: Directory to search, either the dataset root itself or its
+            immediate parent.
 
     Returns:
-        Path | None: The dataset root, or None if not found.
+        The dataset root, or None if not found.
     """
     if (search_dir / "candle").is_dir():
         return search_dir
@@ -139,11 +141,10 @@ def download_visa(keep_tar: bool = False) -> Path:
     if the categories are already on disk.
 
     Args:
-        keep_tar (bool): If False (default), delete the archive after
-            extracting.
+        keep_tar: If False (default), delete the archive after extracting.
 
     Returns:
-        Path: The dataset root, i.e. the directory holding the category folders.
+        The dataset root, i.e. the directory holding the category folders.
 
     Raises:
         RuntimeError: If extraction finishes but no category folders are found.
@@ -184,12 +185,12 @@ def load_samples(
     be extracted (call `download_visa` first).
 
     Args:
-        category (str | None): Restrict to one of `CATEGORIES`, or None for all.
-        split (str | None): Restrict to "train" or "test", or None for both.
-        label (str | None): Restrict to "normal" or "anomaly", or None for both.
+        category: Restrict to one of `CATEGORIES`, or None for all.
+        split: Restrict to "train" or "test", or None for both.
+        label: Restrict to "normal" or "anomaly", or None for both.
 
     Returns:
-        list[VisaSample]: The matching samples with resolved on-disk paths.
+        The matching samples with resolved on-disk paths.
 
     Raises:
         ValueError: If `category` is not a known VisA category.
@@ -234,10 +235,10 @@ def load_image(sample: VisaSample) -> np.ndarray:
     """Load a sample's image as an RGB array.
 
     Args:
-        sample (VisaSample): The sample to load.
+        sample: The sample to load.
 
     Returns:
-        np.ndarray: uint8 array of shape (H, W, 3).
+        uint8 array of shape (H, W, 3).
     """
     with Image.open(sample.image_path) as im:
         return np.asarray(im.convert("RGB"))
@@ -247,11 +248,11 @@ def load_mask(sample: VisaSample) -> np.ndarray | None:
     """Load a sample's ground-truth defect mask as a boolean array.
 
     Args:
-        sample (VisaSample): The sample to load.
+        sample: The sample to load.
 
     Returns:
-        np.ndarray | None: Boolean array of shape (H, W) where True marks
-            defect pixels, or None for normal samples.
+        Boolean array of shape (H, W) where True marks defect pixels, or None
+        for normal samples.
     """
     if sample.mask_path is None:
         return None
@@ -263,11 +264,11 @@ def resize_mask(mask: np.ndarray, size: int) -> np.ndarray:
     """Nearest-neighbour resize a boolean mask to `size` x `size`.
 
     Args:
-        mask (np.ndarray): Boolean mask of shape (H, W).
-        size (int): Target side length in pixels.
+        mask: Boolean mask of shape (H, W).
+        size: Target side length in pixels.
 
     Returns:
-        np.ndarray: Boolean mask of shape (size, size).
+        Boolean mask of shape (size, size).
     """
     resized = Image.fromarray(mask.astype(np.uint8)).resize(
         (size, size), Image.Resampling.NEAREST
@@ -281,11 +282,11 @@ def build_transform(img_size: int) -> transforms.Compose:
     """Build the image transform: resize, tensor, ImageNet-normalise.
 
     Args:
-        img_size (int): Side length in pixels of the square model input.
+        img_size: Side length in pixels of the square model input.
 
     Returns:
-        transforms.Compose: Maps an (H, W, 3) uint8 RGB array to a normalised
-            float tensor of shape (3, img_size, img_size).
+        A transform mapping an (H, W, 3) uint8 RGB array to a normalised
+        float tensor of shape (3, img_size, img_size).
     """
     return transforms.Compose(
         [
@@ -301,16 +302,16 @@ class VisaDataset(Dataset):
     """A torch dataset of VisA images (no labels — training uses normals only).
 
     Attributes:
-        samples (list[VisaSample]): The samples to serve.
-        transform (transforms.Compose): Transform applied to each loaded image.
+        samples: The samples to serve.
+        transform: Transform applied to each loaded image.
     """
 
     def __init__(self, samples: list[VisaSample], transform: transforms.Compose):
         """Wrap a list of samples with an image transform.
 
         Args:
-            samples (list[VisaSample]): Samples to serve.
-            transform (transforms.Compose): Transform from `build_transform`.
+            samples: Samples to serve.
+            transform: Transform from `build_transform`.
         """
         self.samples = samples
         self.transform = transform
@@ -319,18 +320,18 @@ class VisaDataset(Dataset):
         """Return the number of samples.
 
         Returns:
-            int: Sample count.
+            Sample count.
         """
         return len(self.samples)
 
-    def __getitem__(self, index: int):
+    def __getitem__(self, index: int) -> torch.Tensor:
         """Load and transform the image at `index`.
 
         Args:
-            index (int): Position in `samples`.
+            index: Position in `samples`.
 
         Returns:
-            torch.Tensor: Normalised image tensor of shape (3, H, W).
+            Normalised image tensor of shape (3, H, W).
         """
         image = load_image(self.samples[index])
-        return self.transform(np.ascontiguousarray(image))
+        return cast(torch.Tensor, self.transform(np.ascontiguousarray(image)))

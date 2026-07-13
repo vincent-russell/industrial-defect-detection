@@ -25,11 +25,11 @@ def _resize_rgb(image: np.ndarray, size: int) -> np.ndarray:
     """Bilinear-resize an RGB image to `size` x `size`.
 
     Args:
-        image (np.ndarray): RGB image of shape (H, W, 3), uint8.
-        size (int): Target side length.
+        image: RGB image of shape (H, W, 3), uint8.
+        size: Target side length.
 
     Returns:
-        np.ndarray: Resized RGB image of shape (size, size, 3), uint8.
+        Resized RGB image of shape (size, size, 3), uint8.
     """
     return np.asarray(
         Image.fromarray(image).resize((size, size), Image.Resampling.BILINEAR)
@@ -40,10 +40,10 @@ def _normalize(amap: np.ndarray) -> np.ndarray:
     """Min-max scale an anomaly map to [0, 1] for display.
 
     Args:
-        amap (np.ndarray): Anomaly map with arbitrary positive range.
+        amap: Anomaly map with arbitrary positive range.
 
     Returns:
-        np.ndarray: The map rescaled to [0, 1]; all-zeros if the map is constant.
+        The map rescaled to [0, 1]; all-zeros if the map is constant.
     """
     lo, hi = float(amap.min()), float(amap.max())
     return (amap - lo) / (hi - lo) if hi > lo else np.zeros_like(amap)
@@ -60,14 +60,14 @@ def save_training_curves(
     figure).
 
     Args:
-        history (dict[str, list[float]] | None): Per-epoch arrays as returned
-            by `train`, or None to load the saved
-            ``history_<backbone>_<category>.json`` from `config.RESULTS_DIR`.
-        path (Path | None): Destination PNG, or None for the default
+        history: Per-epoch arrays as returned by `train`, or None to load the
+            saved ``history_<backbone>_<category>.json`` from
+            `config.RESULTS_DIR`.
+        path: Destination PNG, or None for the default
             ``training_<backbone>_<category>.png`` under `config.RESULTS_DIR`.
 
     Returns:
-        Path: The path the figure was written to.
+        The path the figure was written to.
 
     Raises:
         FileNotFoundError: If `history` is None and no saved history exists.
@@ -131,11 +131,11 @@ def _select_examples(
     the test split, plus one normal sample for contrast.
 
     Args:
-        samples (list[data.VisaSample]): The category's full test split.
-        count (int): Total number of examples to return, including the normal.
+        samples: The category's full test split.
+        count: Total number of examples to return, including the normal.
 
     Returns:
-        list[data.VisaSample]: The selected samples, anomalies first.
+        The selected samples, anomalies first.
     """
     anomalies = [s for s in samples if s.is_anomaly and s.mask_path is not None]
     normals = [s for s in samples if not s.is_anomaly]
@@ -158,11 +158,11 @@ def save_examples(path: Path | None = None) -> Path:
     heatmap.
 
     Args:
-        path (Path | None): Destination PNG, or None for the default
+        path: Destination PNG, or None for the default
             ``examples_<backbone>_<category>.png`` under `config.RESULTS_DIR`.
 
     Returns:
-        Path: The path the figure was written to.
+        The path the figure was written to.
 
     Raises:
         FileNotFoundError: If no trained student weights exist yet.

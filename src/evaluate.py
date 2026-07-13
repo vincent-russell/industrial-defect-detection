@@ -24,10 +24,10 @@ def load_model(device: torch.device) -> STFPM:
     """Build an STFPM model and load the saved student weights.
 
     Args:
-        device (torch.device): Device to place the model on.
+        device: Device to place the model on.
 
     Returns:
-        STFPM: The model in eval mode, ready for inference.
+        The model in eval mode, ready for inference.
 
     Raises:
         FileNotFoundError: If no trained student weights exist yet.
@@ -48,13 +48,12 @@ def predict(model: STFPM, image: np.ndarray, device: torch.device) -> np.ndarray
     """Compute the smoothed anomaly map for one image at model resolution.
 
     Args:
-        model (STFPM): The trained model.
-        image (np.ndarray): RGB image, shape (H, W, 3), uint8.
-        device (torch.device): Device the model lives on.
+        model: The trained model.
+        image: RGB image, shape (H, W, 3), uint8.
+        device: Device the model lives on.
 
     Returns:
-        np.ndarray: Anomaly map of shape (IMG_SIZE, IMG_SIZE); higher is more
-            anomalous.
+        Anomaly map of shape (IMG_SIZE, IMG_SIZE); higher is more anomalous.
     """
     transform = build_transform(config.IMG_SIZE)
     tensor = cast(torch.Tensor, transform(np.ascontiguousarray(image)))
@@ -73,12 +72,12 @@ def _save_metrics(results: dict[str, float], path: Path | None = None) -> Path:
     """Write evaluation metrics, with their run configuration, to JSON.
 
     Args:
-        results (dict[str, float]): Metrics as returned by `evaluate`.
-        path (Path | None): Destination file, or None for the default
+        results: Metrics as returned by `evaluate`.
+        path: Destination file, or None for the default
             ``metrics_<backbone>_<category>.json`` under `config.RESULTS_DIR`.
 
     Returns:
-        Path: The path written to.
+        The path written to.
     """
     if path is None:
         path = config.RESULTS_DIR / f"metrics_{config.BACKBONE}_{config.CATEGORY}.json"
@@ -111,14 +110,14 @@ def score(
     for both the anomaly map and the ground-truth mask.
 
     Args:
-        model (STFPM): The model to score.
-        samples (list[data.VisaSample]): The test samples to score over.
-        device (torch.device): Device the model lives on.
-        progress (bool): If True, show a per-image progress bar.
+        model: The model to score.
+        samples: The test samples to score over.
+        device: Device the model lives on.
+        progress: If True, show a per-image progress bar.
 
     Returns:
-        dict[str, float]: Metrics with keys ``image_auroc``, ``pixel_auroc``,
-            ``best_iou``, and ``iou_threshold``.
+        Metrics with keys ``image_auroc``, ``pixel_auroc``, ``best_iou``,
+        and ``iou_threshold``.
     """
     was_training = model.training
     model.eval()
@@ -158,8 +157,8 @@ def evaluate() -> dict[str, float]:
     """Score the trained student over the category's test split and save metrics.
 
     Returns:
-        dict[str, float]: Metrics with keys ``image_auroc``, ``pixel_auroc``,
-            ``best_iou``, and ``iou_threshold``.
+        Metrics with keys ``image_auroc``, ``pixel_auroc``, ``best_iou``,
+        and ``iou_threshold``.
     """
     device = resolve_device()
     model = load_model(device)

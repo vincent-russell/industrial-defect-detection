@@ -32,7 +32,7 @@ def resolve_device() -> torch.device:
     """Return the configured device, falling back to CPU if CUDA is unavailable.
 
     Returns:
-        torch.device: The device to run on.
+        The device to run on.
     """
     if config.DEVICE == "cuda" and not torch.cuda.is_available():
         print("CUDA requested but not available; falling back to CPU.")
@@ -47,7 +47,7 @@ class FeatureExtractor(nn.Module):
     requested stages and stopping after the deepest one.
 
     Attributes:
-        layers (tuple[str, ...]): Stage names whose outputs are returned, e.g.
+        layers: Stage names whose outputs are returned, e.g.
             ("layer1", "layer2", "layer3").
     """
 
@@ -55,10 +55,10 @@ class FeatureExtractor(nn.Module):
         """Build the extractor from a torchvision backbone.
 
         Args:
-            backbone (str): Backbone key, one of `_BACKBONES`.
-            layers (tuple[str, ...]): Stage names to tap, a subset of `_STAGES`.
-            pretrained (bool): If True, load ImageNet weights; if False,
-                randomly initialise.
+            backbone: Backbone key, one of `_BACKBONES`.
+            layers: Stage names to tap, a subset of `_STAGES`.
+            pretrained: If True, load ImageNet weights; if False, randomly
+                initialise.
 
         Raises:
             KeyError: If `backbone` is not a known backbone.
@@ -74,11 +74,11 @@ class FeatureExtractor(nn.Module):
         """Extract feature maps at the configured stages.
 
         Args:
-            x (torch.Tensor): Input batch of shape (N, 3, H, W).
+            x: Input batch of shape (N, 3, H, W).
 
         Returns:
-            list[torch.Tensor]: One feature map per requested stage, in depth
-                order, each of shape (N, C_l, H_l, W_l).
+            One feature map per requested stage, in depth order, each of
+            shape (N, C_l, H_l, W_l).
         """
         x = self.stem(x)
         feats: list[torch.Tensor] = []
@@ -95,17 +95,16 @@ class STFPM(nn.Module):
     """A frozen teacher paired with a trainable student for feature matching.
 
     Attributes:
-        teacher (FeatureExtractor): Frozen pretrained backbone.
-        student (FeatureExtractor): Randomly initialised backbone; the only
-            part with gradients.
+        teacher: Frozen pretrained backbone.
+        student: Randomly initialised backbone; the only part with gradients.
     """
 
     def __init__(self, backbone: str, layers: tuple[str, ...]):
         """Build the teacher/student pair.
 
         Args:
-            backbone (str): Backbone key shared by teacher and student.
-            layers (tuple[str, ...]): Feature-pyramid stages to compare.
+            backbone: Backbone key shared by teacher and student.
+            layers: Feature-pyramid stages to compare.
         """
         super().__init__()
         self.teacher = FeatureExtractor(backbone, layers, pretrained=True)
@@ -118,11 +117,11 @@ class STFPM(nn.Module):
         """Extract teacher and student features for the same input.
 
         Args:
-            x (torch.Tensor): Input batch of shape (N, 3, H, W).
+            x: Input batch of shape (N, 3, H, W).
 
         Returns:
-            tuple[list[torch.Tensor], list[torch.Tensor]]: The teacher feature
-                maps (detached) and the student feature maps, aligned by stage.
+            The teacher feature maps (detached) and the student feature maps,
+            aligned by stage.
         """
         with torch.no_grad():
             teacher_feats = self.teacher(x)
@@ -133,10 +132,10 @@ class STFPM(nn.Module):
         """Set training mode while keeping the teacher frozen in eval mode.
 
         Args:
-            mode (bool): Whether to put the student in training mode.
+            mode: Whether to put the student in training mode.
 
         Returns:
-            STFPM: This module, for chaining.
+            This module, for chaining.
         """
         super().train(mode)
         self.teacher.eval()  # frozen batch-norm stats: teacher is always eval
@@ -152,12 +151,12 @@ def distillation_loss(
     compared with mean squared error.
 
     Args:
-        teacher_feats (list[torch.Tensor]): Teacher feature maps, one per stage.
-        student_feats (list[torch.Tensor]): Student feature maps, aligned by
-            stage with `teacher_feats`.
+        teacher_feats: Teacher feature maps, one per stage.
+        student_feats: Student feature maps, aligned by stage with
+            `teacher_feats`.
 
     Returns:
-        torch.Tensor: Scalar loss.
+        Scalar loss.
     """
     loss = teacher_feats[0].new_zeros(())
     for teacher, student in zip(teacher_feats, student_feats):
@@ -179,14 +178,13 @@ def anomaly_map(
     multiplied together.
 
     Args:
-        teacher_feats (list[torch.Tensor]): Teacher feature maps, one per stage.
-        student_feats (list[torch.Tensor]): Student feature maps, aligned by
-            stage with `teacher_feats`.
-        out_size (tuple[int, int]): Target (H, W) for the returned map.
+        teacher_feats: Teacher feature maps, one per stage.
+        student_feats: Student feature maps, aligned by stage with
+            `teacher_feats`.
+        out_size: Target (H, W) for the returned map.
 
     Returns:
-        torch.Tensor: Anomaly map of shape (N, 1, H, W); higher is more
-            anomalous.
+        Anomaly map of shape (N, 1, H, W); higher is more anomalous.
     """
     amap = torch.ones(
         teacher_feats[0].shape[0], 1, *out_size, device=teacher_feats[0].device

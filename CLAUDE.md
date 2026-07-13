@@ -26,8 +26,10 @@ Everything runs locally on a machine with an NVIDIA GPU.
 ## Conventions
 - `src/*.py` is **pure Python** — no `!`/`%` notebook magics.
 - **Docstrings: Google style, always** — every function and class has a docstring
-  with an imperative one-line summary and typed `Args:` / `Returns:` / `Raises:`
-  (or `Attributes:`) sections, e.g. `category (str): the object category`. Keep
+  with an imperative one-line summary and `Args:` / `Returns:` / `Raises:`
+  (or `Attributes:`) sections, e.g. `category: the object category`. Types live
+  in the signature annotations only — never repeat them in the docstring; the
+  docstring describes meaning (semantics, shapes, units, valid values). Keep
   this consistent across the whole codebase.
 - Large or regenerated artifacts (dataset, model weights, results) are gitignored.
 - Keep modules small and readable. Commits are authored by Vincent Russell, small and clear.
