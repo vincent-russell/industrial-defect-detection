@@ -108,9 +108,11 @@ def train() -> dict[str, list[float]]:
     }
 
     model.train()
-    for epoch in range(1, config.EPOCHS + 1):
+    progress = tqdm(range(1, config.EPOCHS + 1), desc="epochs")
+    postfix: dict[str, str] = {}
+    for epoch in progress:
         running, seen = 0.0, 0
-        for images in tqdm(loader, desc=f"epoch {epoch}/{config.EPOCHS}", leave=False):
+        for images in loader:
             images = images.to(device)
             teacher_feats, student_feats = model(images)
             loss = distillation_loss(teacher_feats, student_feats)
@@ -125,7 +127,7 @@ def train() -> dict[str, list[float]]:
         epoch_loss = running / seen
         history["epoch"].append(epoch)
         history["loss"].append(epoch_loss)
-        msg = f"epoch {epoch}/{config.EPOCHS}  loss={epoch_loss:.4f}"
+        postfix["loss"] = f"{epoch_loss:.4f}"
 
         # Diagnostic scoring on the test split (restores train mode internally).
         if eval_samples and (epoch % config.EVAL_EVERY_EPOCHS == 0 or epoch == config.EPOCHS):
@@ -133,11 +135,9 @@ def train() -> dict[str, list[float]]:
             history["eval_epoch"].append(epoch)
             history["image_auroc"].append(scored["image_auroc"])
             history["pixel_auroc"].append(scored["pixel_auroc"])
-            msg += (
-                f"  image AUROC={scored['image_auroc']:.4f}"
-                f"  pixel AUROC={scored['pixel_auroc']:.4f}"
-            )
-        print(msg)
+            postfix["image AUROC"] = f"{scored['image_auroc']:.4f}"
+            postfix["pixel AUROC"] = f"{scored['pixel_auroc']:.4f}"
+        progress.set_postfix(postfix)
 
     config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
     torch.save(model.student.state_dict(), config.STUDENT_WEIGHTS)
