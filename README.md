@@ -47,19 +47,19 @@ images only and evaluated on the official test split:
 
 | Category   | Image AUROC | Pixel AUROC | Best IoU |
 |------------|:-----------:|:-----------:|:--------:|
-| candle     | 0.805 | 0.978 | 0.124 |
+| candle     | 0.807 | 0.979 | 0.127 |
 | capsules   | 0.720 | 0.961 | 0.167 |
 | cashew     | 0.757 | 0.957 | 0.174 |
-| chewinggum | 0.911 | 0.989 | 0.333 |
+| chewinggum | 0.888 | 0.988 | 0.320 |
 | fryum      | 0.833 | 0.942 | 0.202 |
 | macaroni1  | 0.746 | 0.989 | 0.081 |
-| macaroni2  | 0.699 | 0.984 | 0.071 |
-| pcb1       | 0.925 | 0.993 | 0.454 |
-| pcb2       | 0.899 | 0.978 | 0.120 |
+| macaroni2  | 0.700 | 0.984 | 0.070 |
+| pcb1       | 0.925 | 0.993 | 0.452 |
+| pcb2       | 0.901 | 0.978 | 0.120 |
 | pcb3       | 0.783 | 0.979 | 0.186 |
-| pcb4       | 0.972 | 0.976 | 0.256 |
-| pipe_fryum | 0.740 | 0.967 | 0.165 |
-| **mean**   | **0.816** | **0.974** | **0.194** |
+| pcb4       | 0.973 | 0.977 | 0.256 |
+| pipe_fryum | 0.748 | 0.967 | 0.166 |
+| **mean**   | **0.815** | **0.974** | **0.193** |
 
 A few observations:
 
@@ -72,6 +72,10 @@ A few observations:
 - **Best IoU is modest in absolute terms, as expected** — VisA defects are often
   a few dozen pixels, and the anomaly map is a smoothed heatmap rather than a
   crisp mask, which caps IoU well below what the AUROC suggests.
+
+These results are the project's STFPM baseline, frozen as release
+[v1.0.0](https://github.com/vincent-russell/industrial-defect-detection/releases/tag/v1.0.0)
+with the trained student weights attached.
 
 ### Qualitative examples
 
@@ -107,6 +111,11 @@ pipeline with `python main.py`; all parameters live in `config.py`.
 - [x] Train STFPM on normal images (one category)
 - [x] Evaluation (image/pixel ROC AUC, IoU)
 - [x] Result figures and qualitative examples
+- [x] STFPM baseline across all 12 categories (release v1.0.0)
+- [ ] Replace the ImageNet backbone with DINOv2 features, following the
+      direction of current state of the art (Dinomaly, CVPR 2025)
+- [ ] Uncertainty quantification: conformal calibration of image-level scores
+      and pixel-level uncertainty maps
 
 ## Tech
 

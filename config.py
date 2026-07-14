@@ -9,7 +9,7 @@ from pathlib import Path
 # One VisA object category, or "all" to sweep every category and report the
 # category mean. Categories: candle, capsules, cashew, chewinggum, fryum,
 # macaroni1, macaroni2, pcb1, pcb2, pcb3, pcb4, pipe_fryum.
-CATEGORY = "cashew"
+CATEGORY = "all"
 
 # Model
 BACKBONE = "resnet18"  # "resnet18" | "resnet34" | "wide_resnet50_2"

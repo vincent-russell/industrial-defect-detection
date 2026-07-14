@@ -52,6 +52,10 @@ results/      generated outputs (gitignored)
 4. [x] STFPM model + training on normal images (local GPU)
 5. [x] Evaluation (image/pixel ROC AUC, IoU)
 6. [x] Result figures and qualitative examples
+7. [x] STFPM baseline frozen: results snapshot + GitHub release v1.0.0 (weights attached)
+8. [ ] DINOv2 student–teacher (Dinomaly-style) — rewrite `src/model.py` in place;
+       STFPM stays retrievable at tag v1.0.0, no dual code paths
+9. [ ] UQ layer: conformal calibration of image scores + pixel uncertainty maps
 
 ## Dataset
 VisA (Zou et al., ECCV 2022) — https://github.com/amazon-science/spot-diff
